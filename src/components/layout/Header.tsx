@@ -1,0 +1,58 @@
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FileText, Settings, Upload, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+const Header = () => {
+  const isMobile = useIsMobile();
+
+  return (
+    <header className="sticky top-0 z-50 w-full bg-council-primary text-white shadow-md">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <img 
+            src="/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png" 
+            alt="Class Council Compass Logo" 
+            className="h-10 w-10 rounded-full bg-white p-1" 
+          />
+          <h1 className="text-xl font-bold tracking-tight">
+            {isMobile ? "CCC" : "Class Council Compass"}
+          </h1>
+        </div>
+
+        <nav className="hidden md:flex items-center space-x-4">
+          <Link to="/" className="flex items-center space-x-1 hover:text-council-light hover:underline">
+            <Upload size={18} />
+            <span>Upload</span>
+          </Link>
+          <Link to="/students" className="flex items-center space-x-1 hover:text-council-light hover:underline">
+            <Users size={18} />
+            <span>Alunos</span>
+          </Link>
+          <Link to="/reports" className="flex items-center space-x-1 hover:text-council-light hover:underline">
+            <FileText size={18} />
+            <span>Relatórios</span>
+          </Link>
+          <Link to="/settings" className="flex items-center space-x-1 hover:text-council-light hover:underline">
+            <Settings size={18} />
+            <span>Configurações</span>
+          </Link>
+        </nav>
+
+        <div className="md:hidden flex items-center">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-council-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;

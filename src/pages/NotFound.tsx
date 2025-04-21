@@ -1,26 +1,30 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+
+import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import MainLayout from '@/components/layout/MainLayout';
 
 const NotFound = () => {
   const location = useLocation();
 
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
+    <MainLayout>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="rounded-full bg-red-100 p-6 mb-6">
+          <AlertCircle className="h-16 w-16 text-red-600" />
+        </div>
+        <h1 className="text-4xl font-bold text-council-primary mb-4">404</h1>
+        <p className="text-xl text-gray-600 mb-6">Página não encontrada</p>
+        <p className="text-gray-500 mb-8 text-center max-w-md">
+          A página "{location.pathname}" que você está procurando não existe ou foi movida.
+        </p>
+        <Button asChild className="bg-council-primary hover:bg-council-secondary">
+          <Link to="/">Voltar para a página inicial</Link>
+        </Button>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
