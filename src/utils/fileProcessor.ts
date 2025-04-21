@@ -1,32 +1,6 @@
 
 import * as XLSX from 'xlsx';
-
-export interface Student {
-  id: number;
-  name: string;
-  status: string;
-  averageGrade: number;
-  behavioralCodes: string[];
-  subjects: Record<string, {
-    number: number;
-    grade: number;
-    absences: number;
-    correctedAbsences: number;
-  }>;
-  totalAbsences: number;
-  frequency: number;
-  yearlyAbsences: number;
-  yearlyFrequency: number;
-}
-
-export interface ClassData {
-  name: string;
-  year: string;
-  period: string;
-  totalStudents: number;
-  belowAverageCount: number;
-  subjects: string[];
-}
+import { Student, ClassData } from '@/types/student';
 
 export const processMapaoFile = (file: File): Promise<{
   students: Student[];
@@ -43,6 +17,8 @@ export const processMapaoFile = (file: File): Promise<{
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
+        console.log('Raw JSON Data:', jsonData);
+        
         // Extract header information
         const classData: ClassData = {
           name: extractClassNameFromHeader(jsonData),
@@ -53,8 +29,10 @@ export const processMapaoFile = (file: File): Promise<{
           subjects: extractSubjects(jsonData),
         };
         
+        console.log('Extracted subjects:', classData.subjects);
+        
         // Process student rows
-        const students = processStudentRows(jsonData);
+        const students = processStudentRows(jsonData, classData.subjects);
         
         // Update class data counts
         classData.totalStudents = students.length;
@@ -91,30 +69,75 @@ function extractSubjects(jsonData: any[]): string[] {
   
   const header = jsonData[headerRow];
   const subjects: string[] = [];
-  let currentSubject = '';
   
-  for (let i = 2; i < header.length; i++) {
-    const cell = String(header[i] || '').trim();
-    if (cell && cell !== 'Nº' && cell !== 'M' && cell !== 'F' && cell !== 'AC' && 
-        cell !== 'TOTAL' && cell !== 'TF' && cell !== 'Fre(%)' && 
-        cell !== 'FT An' && cell !== 'Fre An(%)') {
-      currentSubject = cell;
-      if (!subjects.includes(currentSubject)) {
-        subjects.push(currentSubject);
+  // Start from column 2 (after ALUNO and Situação)
+  let col = 2;
+  
+  while (col < header.length) {
+    const cell = String(header[col] || '').trim();
+    
+    // If we find a subject name (not one of the special columns)
+    if (cell && 
+        cell !== 'Nº' && 
+        cell !== 'M' && 
+        cell !== 'F' && 
+        cell !== 'AC' && 
+        cell !== 'TOTAL' && 
+        cell !== 'TF' && 
+        cell !== 'Fre(%)' && 
+        cell !== 'FT An' && 
+        cell !== 'Fre An(%)') {
+      
+      // Add the subject if it's not already in the list
+      if (!subjects.includes(cell)) {
+        subjects.push(cell);
       }
+      
+      // Skip the 4 columns for this subject (Nº, M, F, AC)
+      col += 4;
+    } else {
+      // Move to the next column
+      col++;
     }
   }
   
   return subjects;
 }
 
-function processStudentRows(jsonData: any[]): Student[] {
+function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
   
+  const header = jsonData[headerRow];
   const students: Student[] = [];
-  const subjects = extractSubjects(jsonData);
   
+  // Map column indices to subjects
+  const subjectColumns: Record<string, number> = {};
+  let col = 2; // Start after ALUNO and Situação
+  
+  subjects.forEach(subject => {
+    // Find where this subject starts in the header
+    while (col < header.length) {
+      if (String(header[col]).trim() === subject) {
+        subjectColumns[subject] = col;
+        // Move past this subject's columns (Nº, M, F, AC)
+        col += 4;
+        break;
+      }
+      col++;
+    }
+  });
+  
+  // Find the TOTAL column
+  let totalColumn = -1;
+  for (let i = 0; i < header.length; i++) {
+    if (String(header[i]).trim() === 'TOTAL') {
+      totalColumn = i;
+      break;
+    }
+  }
+  
+  // Process each student
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
     if (!row || !Array.isArray(row) || !row[0]) continue;
@@ -128,28 +151,38 @@ function processStudentRows(jsonData: any[]): Student[] {
     const studentSubjects: Record<string, any> = {};
     let totalGrade = 0;
     let subjectCount = 0;
-    let column = 2;
     
-    // Process each subject
+    // Process each subject for this student
     subjects.forEach(subject => {
-      const subjectData = {
-        number: Number(row[column] || 0),
-        grade: Number(row[column + 1] || 0),
-        absences: Number(row[column + 2] || 0),
-        correctedAbsences: Number(row[column + 3] || 0)
-      };
-      
-      studentSubjects[subject] = subjectData;
-      totalGrade += subjectData.grade;
-      subjectCount++;
-      column += 4;
+      const subjectStartCol = subjectColumns[subject];
+      if (subjectStartCol !== undefined) {
+        const subjectData = {
+          number: Number(row[subjectStartCol] || 0),
+          grade: Number(row[subjectStartCol + 1] || 0),
+          absences: Number(row[subjectStartCol + 2] || 0),
+          correctedAbsences: Number(row[subjectStartCol + 3] || 0)
+        };
+        
+        studentSubjects[subject] = subjectData;
+        totalGrade += subjectData.grade;
+        subjectCount++;
+      }
     });
     
     // Process total columns
-    const totalAbsences = Number(row[column] || 0);
-    const frequency = Number(row[column + 1] || 0);
-    const yearlyAbsences = Number(row[column + 2] || 0);
-    const yearlyFrequency = Number(row[column + 3] || 0);
+    let totalAbsences = 0;
+    let frequency = 100;
+    let yearlyAbsences = 0;
+    let yearlyFrequency = 100;
+    
+    if (totalColumn > -1) {
+      totalAbsences = Number(row[totalColumn + 1] || 0);
+      frequency = Number(row[totalColumn + 2] || 100);
+      yearlyAbsences = Number(row[totalColumn + 3] || 0);
+      yearlyFrequency = Number(row[totalColumn + 4] || 100);
+    }
+    
+    const lowFrequency = frequency < 70 || yearlyFrequency < 70;
     
     students.push({
       id: i - headerRow,
@@ -161,7 +194,8 @@ function processStudentRows(jsonData: any[]): Student[] {
       totalAbsences,
       frequency,
       yearlyAbsences,
-      yearlyFrequency
+      yearlyFrequency,
+      lowFrequency
     });
   }
   

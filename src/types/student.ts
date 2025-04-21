@@ -15,6 +15,7 @@ export interface Student {
   frequency: number;
   yearlyAbsences: number;
   yearlyFrequency: number;
+  lowFrequency?: boolean;
 }
 
 export interface ClassData {

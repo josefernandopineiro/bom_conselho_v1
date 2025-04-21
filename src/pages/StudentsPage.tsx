@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Search, AlertCircle, CheckCircle, Filter } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Search, AlertCircle, CheckCircle, Filter, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,16 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
-
-const mockStudents = [
-  { id: 1, name: 'Ana Beatriz Lima da Silva', status: 'Ativo', averageGrade: 7.5, behavioralCode: null, subjects: { 'Matemática': 8, 'Português': 7, 'História': 8, 'Geografia': 7, 'Ciências': 7 } },
-  { id: 2, name: 'Amanda Ramos Oliveira Silva', status: 'Ativo', averageGrade: 6.2, behavioralCode: null, subjects: { 'Matemática': 6, 'Português': 5, 'História': 7, 'Geografia': 7, 'Ciências': 6 } },
-  { id: 3, name: 'Beatriz de Carvalho Belizardo', status: 'Ativo', averageGrade: 7.8, behavioralCode: null, subjects: { 'Matemática': 8, 'Português': 8, 'História': 7, 'Geografia': 8, 'Ciências': 8 } },
-  { id: 4, name: 'Danilo Martins Ferreira', status: 'Ativo', averageGrade: 5.4, behavioralCode: null, subjects: { 'Matemática': 6, 'Português': 5, 'História': 4, 'Geografia': 6, 'Ciências': 6 } },
-  { id: 5, name: 'Daniela Borges Bispo dos Santos', status: 'Ativo', averageGrade: 9.2, behavioralCode: null, subjects: { 'Matemática': 9, 'Português': 9, 'História': 10, 'Geografia': 9, 'Ciências': 9 } },
-  { id: 6, name: 'Emily Martins Pereira', status: 'Ativo', averageGrade: 8.0, behavioralCode: null, subjects: { 'Matemática': 8, 'Português': 8, 'História': 7, 'Geografia': 9, 'Ciências': 8 } },
-  { id: 7, name: 'Emily Rodrigues Conceição', status: 'Ativo', averageGrade: 6.8, behavioralCode: null, subjects: { 'Matemática': 7, 'Português': 6, 'História': 7, 'Geografia': 7, 'Ciências': 7 } },
-];
+import { useStudents } from '@/context/StudentsContext';
 
 const behavioralOptions = [
   { value: '1', label: '1 - Atitude Positiva' },
@@ -30,7 +22,7 @@ const behavioralOptions = [
 
 const StudentsPage = () => {
   const { toast } = useToast();
-  const [students, setStudents] = useState(mockStudents);
+  const { students, updateStudentBehavioralCodes, behavioralCodes } = useStudents();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -40,8 +32,9 @@ const StudentsPage = () => {
     const matchesStatus = filterStatus === 'all' || 
                           (filterStatus === 'below-average' && student.averageGrade < 5) ||
                           (filterStatus === 'above-average' && student.averageGrade >= 5) ||
-                          (filterStatus === 'not-classified' && student.behavioralCode === null) ||
-                          (filterStatus === 'classified' && student.behavioralCode !== null);
+                          (filterStatus === 'low-frequency' && student.lowFrequency) ||
+                          (filterStatus === 'not-classified' && student.behavioralCodes.length === 0) ||
+                          (filterStatus === 'classified' && student.behavioralCodes.length > 0);
     return matchesSearch && matchesStatus;
   });
 
@@ -52,15 +45,18 @@ const StudentsPage = () => {
   const handleBehavioralChange = (value: string) => {
     if (!selectedStudent) return;
 
-    const updatedStudents = students.map(student => {
-      if (student.id === selectedStudent.id) {
-        return { ...student, behavioralCode: value };
-      }
-      return student;
-    });
+    // Update behavioral codes
+    const updatedCodes = selectedStudent.behavioralCodes.includes(value)
+      ? selectedStudent.behavioralCodes.filter((code: string) => code !== value)
+      : [...selectedStudent.behavioralCodes, value];
 
-    setStudents(updatedStudents);
-    setSelectedStudent({ ...selectedStudent, behavioralCode: value });
+    updateStudentBehavioralCodes(selectedStudent.id, updatedCodes);
+    
+    // Update selected student locally
+    setSelectedStudent({
+      ...selectedStudent,
+      behavioralCodes: updatedCodes
+    });
 
     toast({
       title: "Classificação atualizada",
@@ -105,6 +101,7 @@ const StudentsPage = () => {
                   <SelectItem value="all">Todos os alunos</SelectItem>
                   <SelectItem value="below-average">Abaixo da média</SelectItem>
                   <SelectItem value="above-average">Acima da média</SelectItem>
+                  <SelectItem value="low-frequency">Baixa frequência</SelectItem>
                   <SelectItem value="not-classified">Não classificados</SelectItem>
                   <SelectItem value="classified">Classificados</SelectItem>
                 </SelectContent>
@@ -139,9 +136,15 @@ const StudentsPage = () => {
                             </h3>
                             <p className={`text-sm ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
                               Média: {student.averageGrade.toFixed(1)}
+                              {student.lowFrequency && (
+                                <span className="ml-2 inline-flex items-center text-amber-600">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Baixa Freq.
+                                </span>
+                              )}
                             </p>
                           </div>
-                          <div>
+                          <div className="flex space-x-1">
                             {student.averageGrade < 5 && (
                               <div className={`h-2 w-2 rounded-full ${selectedStudent?.id === student.id ? 'bg-red-300' : 'bg-red-500'}`}></div>
                             )}
@@ -151,10 +154,14 @@ const StudentsPage = () => {
                           <span className={`text-xs ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
                             {student.status}
                           </span>
-                          {student.behavioralCode ? (
-                            <Badge className={`${selectedStudent?.id === student.id ? 'bg-white text-council-primary' : 'bg-council-secondary text-white'}`}>
-                              Código: {student.behavioralCode}
-                            </Badge>
+                          {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {student.behavioralCodes.map((code: string) => (
+                                <Badge key={code} className={`${selectedStudent?.id === student.id ? 'bg-white text-council-primary' : 'bg-council-secondary text-white'}`}>
+                                  {code}
+                                </Badge>
+                              ))}
+                            </div>
                           ) : (
                             <Badge variant="outline" className={`${selectedStudent?.id === student.id ? 'border-white text-white' : 'border-gray-300 text-gray-500'}`}>
                               Não classificado
@@ -180,13 +187,22 @@ const StudentsPage = () => {
                 <CardHeader>
                   <CardTitle className="text-xl text-council-primary flex justify-between items-center">
                     <span>{selectedStudent.name}</span>
-                    {getBadgeForGrade(selectedStudent.averageGrade)}
+                    <div className="flex items-center gap-2">
+                      {selectedStudent.lowFrequency && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Baixa Frequência ({selectedStudent.frequency.toFixed(0)}%)
+                        </Badge>
+                      )}
+                      {getBadgeForGrade(selectedStudent.averageGrade)}
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="grades">
                     <TabsList className="mb-4">
                       <TabsTrigger value="grades">Notas</TabsTrigger>
+                      <TabsTrigger value="frequency">Frequência</TabsTrigger>
                       <TabsTrigger value="behavioral">Classificação Comportamental</TabsTrigger>
                     </TabsList>
                     
@@ -200,12 +216,12 @@ const StudentsPage = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {Object.entries(selectedStudent.subjects).map(([subject, grade]: [string, any]) => (
+                          {Object.entries(selectedStudent.subjects).map(([subject, data]: [string, any]) => (
                             <TableRow key={subject}>
                               <TableCell className="font-medium">{subject}</TableCell>
-                              <TableCell className="text-right">{grade}</TableCell>
+                              <TableCell className="text-right">{data.grade}</TableCell>
                               <TableCell className="text-right">
-                                {grade >= 5 ? (
+                                {data.grade >= 5 ? (
                                   <span className="text-green-600 flex items-center justify-end">
                                     <CheckCircle className="h-4 w-4 mr-1" />
                                     Aprovado
@@ -240,6 +256,53 @@ const StudentsPage = () => {
                       </Table>
                     </TabsContent>
                     
+                    <TabsContent value="frequency">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Disciplina</TableHead>
+                            <TableHead className="text-right">Faltas</TableHead>
+                            <TableHead className="text-right">Faltas Corrigidas</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(selectedStudent.subjects).map(([subject, data]: [string, any]) => (
+                            <TableRow key={subject}>
+                              <TableCell className="font-medium">{subject}</TableCell>
+                              <TableCell className="text-right">{data.absences}</TableCell>
+                              <TableCell className="text-right">{data.correctedAbsences}</TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-gray-50">
+                            <TableCell className="font-bold">Total (Período)</TableCell>
+                            <TableCell className="text-right font-bold">{selectedStudent.totalAbsences}</TableCell>
+                            <TableCell className="text-right">
+                              Frequência: {selectedStudent.frequency.toFixed(0)}%
+                              {selectedStudent.frequency < 70 && (
+                                <span className="ml-2 text-amber-500 flex items-center justify-end">
+                                  <AlertTriangle className="h-4 w-4 mr-1" />
+                                  Baixa
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow className="bg-gray-100">
+                            <TableCell className="font-bold">Total (Anual)</TableCell>
+                            <TableCell className="text-right font-bold">{selectedStudent.yearlyAbsences}</TableCell>
+                            <TableCell className="text-right">
+                              Frequência: {selectedStudent.yearlyFrequency.toFixed(0)}%
+                              {selectedStudent.yearlyFrequency < 70 && (
+                                <span className="ml-2 text-amber-500 flex items-center justify-end">
+                                  <AlertTriangle className="h-4 w-4 mr-1" />
+                                  Baixa
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+                    
                     <TabsContent value="behavioral">
                       <div className="space-y-6">
                         <div className="bg-gray-50 p-4 rounded-md">
@@ -248,18 +311,21 @@ const StudentsPage = () => {
                             Selecione a classificação comportamental que melhor descreve o aluno com base na análise do conselho de classe.
                           </p>
                           
-                          <Select value={selectedStudent.behavioralCode || ''} onValueChange={handleBehavioralChange}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecione uma classificação" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {behavioralOptions.map(option => (
-                                <SelectItem key={option.value} value={option.value}>
+                          <div className="flex flex-wrap gap-2">
+                            {behavioralOptions.map(option => {
+                              const isSelected = selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.includes(option.value);
+                              return (
+                                <Button 
+                                  key={option.value}
+                                  variant={isSelected ? "default" : "outline"}
+                                  onClick={() => handleBehavioralChange(option.value)}
+                                  className={isSelected ? "bg-council-primary" : ""}
+                                >
                                   {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                </Button>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <div className="bg-gray-50 p-4 rounded-md">
