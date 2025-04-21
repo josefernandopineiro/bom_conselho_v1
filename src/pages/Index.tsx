@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
+import { processMapaoFile } from '@/utils/fileProcessor';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -30,28 +32,38 @@ const Index = () => {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) {
       setError('Por favor, selecione um arquivo para enviar.');
       return;
     }
 
     setIsLoading(true);
+    setError(null);
 
-    // Simulate file upload and processing
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Processa o arquivo usando o novo utilitário
+      const { students, classData } = await processMapaoFile(selectedFile);
       
-      // Success notification
+      // Armazena os dados processados no localStorage para uso nas outras páginas
+      localStorage.setItem('processedStudents', JSON.stringify(students));
+      localStorage.setItem('processedClassData', JSON.stringify(classData));
+      
+      // Mostra notificação de sucesso
       toast({
         title: "Arquivo processado com sucesso!",
-        description: `O arquivo ${selectedFile.name} foi carregado e processado.`,
+        description: `${students.length} alunos foram carregados da turma ${classData.name}.`,
         duration: 5000,
       });
 
-      // Navigate to students page after successful upload
+      // Navega para a página de alunos
       navigate('/students');
-    }, 2000);
+    } catch (err) {
+      console.error('Erro ao processar arquivo:', err);
+      setError((err as Error).message || 'Ocorreu um erro ao processar o arquivo.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,9 +111,14 @@ const Index = () => {
               <Button 
                 className="w-full bg-council-primary hover:bg-council-secondary"
                 onClick={handleUpload}
-                disabled={!selectedFile || isLoading}
+                disabled={isLoading}
               >
-                {isLoading ? 'Processando...' : 'Processar Arquivo'}
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <LoadingSpinner className="mr-2" />
+                    Processando...
+                  </span>
+                ) : 'Processar Arquivo'}
               </Button>
             </CardFooter>
           </Card>

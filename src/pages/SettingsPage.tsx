@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const SettingsPage = () => {
   const { toast } = useToast();
@@ -21,17 +22,21 @@ const SettingsPage = () => {
     email: 'contato@escola.edu.br',
   });
 
-  // Behavioral classification state
-  const [behavioralCodes, setBehavioralCodes] = useState([
-    { code: '1', description: 'Atitude Positiva', color: '#34a853' },
-    { code: '2', description: 'Precisa de Atenção', color: '#fbbc05' },
-    { code: '3', description: 'Dificuldade de Aprendizagem', color: '#f57c00' },
-    { code: '4', description: 'Problemas de Comportamento', color: '#ea4335' },
-    { code: '5', description: 'Encaminhamento Necessário', color: '#9c27b0' },
-  ]);
+  // Carrega códigos comportamentais do localStorage ou usa o padrão
+  const [behavioralCodes, setBehavioralCodes] = useState(() => {
+    const savedCodes = localStorage.getItem('behavioralCodes');
+    return savedCodes ? JSON.parse(savedCodes) : [
+      { code: '1', description: 'Atitude Positiva', color: '#34a853' },
+      { code: '2', description: 'Precisa de Atenção', color: '#fbbc05' },
+      { code: '3', description: 'Dificuldade de Aprendizagem', color: '#f57c00' },
+      { code: '4', description: 'Problemas de Comportamento', color: '#ea4335' },
+      { code: '5', description: 'Encaminhamento Necessário', color: '#9c27b0' },
+    ];
+  });
 
   // New code form state
   const [newCode, setNewCode] = useState({ code: '', description: '', color: '#000000' });
+  const [error, setError] = useState<string | null>(null);
 
   const handleSchoolInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,6 +44,8 @@ const SettingsPage = () => {
   };
 
   const handleSaveSchoolInfo = () => {
+    localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+    
     toast({
       title: "Informações salvas",
       description: "As informações da escola foram atualizadas com sucesso.",
@@ -54,32 +61,30 @@ const SettingsPage = () => {
 
   const handleNewCodeChange = (field: string, value: string) => {
     setNewCode(prev => ({ ...prev, [field]: value }));
+    setError(null);
   };
 
   const handleAddCode = () => {
     if (!newCode.code || !newCode.description) {
-      toast({
-        variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Código e descrição são obrigatórios.",
-        duration: 3000,
-      });
+      setError('Código e descrição são obrigatórios.');
       return;
     }
 
     // Check if code already exists
     if (behavioralCodes.some(code => code.code === newCode.code)) {
-      toast({
-        variant: "destructive",
-        title: "Código duplicado",
-        description: "Este código já existe. Por favor, use um código diferente.",
-        duration: 3000,
-      });
+      setError('Este código já existe. Por favor, use um código diferente.');
+      return;
+    }
+
+    // Limite de 10 códigos
+    if (behavioralCodes.length >= 10) {
+      setError('Limite máximo de 10 códigos comportamentais atingido.');
       return;
     }
 
     setBehavioralCodes([...behavioralCodes, newCode]);
     setNewCode({ code: '', description: '', color: '#000000' });
+    setError(null);
 
     toast({
       title: "Código adicionado",
@@ -101,6 +106,8 @@ const SettingsPage = () => {
   };
 
   const handleSaveCodes = () => {
+    localStorage.setItem('behavioralCodes', JSON.stringify(behavioralCodes));
+    
     toast({
       title: "Códigos salvos",
       description: "Os códigos comportamentais foram atualizados com sucesso.",
@@ -229,12 +236,12 @@ const SettingsPage = () => {
               <CardHeader>
                 <CardTitle className="text-council-primary">Códigos Comportamentais</CardTitle>
                 <CardDescription>
-                  Configure os códigos comportamentais utilizados na avaliação dos alunos
+                  Configure os códigos comportamentais utilizados na avaliação dos alunos (máximo de 10)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-900 mb-4">Códigos Atuais</h3>
+                  <h3 className="font-medium text-gray-900 mb-4">Códigos Atuais ({behavioralCodes.length}/10)</h3>
                   <div className="space-y-4">
                     {behavioralCodes.map((code, index) => (
                       <div key={index} className="flex flex-col md:flex-row gap-3 border-b pb-3">
@@ -277,6 +284,14 @@ const SettingsPage = () => {
                   </div>
                 </div>
 
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erro</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="bg-gray-50 p-4 rounded-md">
                   <h3 className="font-medium text-gray-900 mb-4">Adicionar Novo Código</h3>
                   <div className="flex flex-col md:flex-row gap-3">
@@ -310,6 +325,7 @@ const SettingsPage = () => {
                       <Button
                         onClick={handleAddCode}
                         className="h-10 bg-council-primary hover:bg-council-secondary"
+                        disabled={behavioralCodes.length >= 10}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Adicionar
