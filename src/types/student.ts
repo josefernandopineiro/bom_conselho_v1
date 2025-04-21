@@ -5,7 +5,16 @@ export interface Student {
   status: string;
   averageGrade: number;
   behavioralCodes: string[];
-  subjects: Record<string, number>;
+  subjects: Record<string, {
+    number: number;
+    grade: number;
+    absences: number;
+    correctedAbsences: number;
+  }>;
+  totalAbsences: number;
+  frequency: number;
+  yearlyAbsences: number;
+  yearlyFrequency: number;
 }
 
 export interface ClassData {

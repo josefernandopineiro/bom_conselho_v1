@@ -7,7 +7,16 @@ export interface Student {
   status: string;
   averageGrade: number;
   behavioralCodes: string[];
-  subjects: Record<string, number>;
+  subjects: Record<string, {
+    number: number;
+    grade: number;
+    absences: number;
+    correctedAbsences: number;
+  }>;
+  totalAbsences: number;
+  frequency: number;
+  yearlyAbsences: number;
+  yearlyFrequency: number;
 }
 
 export interface ClassData {
@@ -30,30 +39,26 @@ export const processMapaoFile = (file: File): Promise<{
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
-        
-        // Assumimos que a primeira planilha contém os dados do Mapão
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Converte para JSON
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        // Processa os dados do cabeçalho para extrair informações da turma
+        // Extract header information
         const classData: ClassData = {
           name: extractClassNameFromHeader(jsonData),
           year: extractYearFromHeader(jsonData),
           period: extractPeriodFromHeader(jsonData),
-          totalStudents: 0, // Será atualizado depois
-          belowAverageCount: 0, // Será atualizado depois
+          totalStudents: 0,
+          belowAverageCount: 0,
           subjects: extractSubjects(jsonData),
         };
         
-        // Processa as linhas de alunos
+        // Process student rows
         const students = processStudentRows(jsonData);
         
-        // Atualiza as contagens da turma
+        // Update class data counts
         classData.totalStudents = students.length;
-        classData.belowAverageCount = students.filter(s => s.averageGrade < 7).length;
+        classData.belowAverageCount = students.filter(s => s.averageGrade < 5).length;
         
         resolve({ students, classData });
       } catch (error) {
@@ -70,10 +75,100 @@ export const processMapaoFile = (file: File): Promise<{
   });
 };
 
-// Funções auxiliares para extrair informações específicas do arquivo
+function findHeaderRow(jsonData: any[]): number {
+  for (let i = 0; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (row && Array.isArray(row) && String(row[0]).toUpperCase() === 'ALUNO') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function extractSubjects(jsonData: any[]): string[] {
+  const headerRow = findHeaderRow(jsonData);
+  if (headerRow === -1) return [];
+  
+  const header = jsonData[headerRow];
+  const subjects: string[] = [];
+  let currentSubject = '';
+  
+  for (let i = 2; i < header.length; i++) {
+    const cell = String(header[i] || '').trim();
+    if (cell && cell !== 'Nº' && cell !== 'M' && cell !== 'F' && cell !== 'AC' && 
+        cell !== 'TOTAL' && cell !== 'TF' && cell !== 'Fre(%)' && 
+        cell !== 'FT An' && cell !== 'Fre An(%)') {
+      currentSubject = cell;
+      if (!subjects.includes(currentSubject)) {
+        subjects.push(currentSubject);
+      }
+    }
+  }
+  
+  return subjects;
+}
+
+function processStudentRows(jsonData: any[]): Student[] {
+  const headerRow = findHeaderRow(jsonData);
+  if (headerRow === -1) return [];
+  
+  const students: Student[] = [];
+  const subjects = extractSubjects(jsonData);
+  
+  for (let i = headerRow + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row) || !row[0]) continue;
+    
+    const name = String(row[0]);
+    const status = String(row[1] || '');
+    
+    // Skip non-active students
+    if (status.toLowerCase() !== 'ativo') continue;
+    
+    const studentSubjects: Record<string, any> = {};
+    let totalGrade = 0;
+    let subjectCount = 0;
+    let column = 2;
+    
+    // Process each subject
+    subjects.forEach(subject => {
+      const subjectData = {
+        number: Number(row[column] || 0),
+        grade: Number(row[column + 1] || 0),
+        absences: Number(row[column + 2] || 0),
+        correctedAbsences: Number(row[column + 3] || 0)
+      };
+      
+      studentSubjects[subject] = subjectData;
+      totalGrade += subjectData.grade;
+      subjectCount++;
+      column += 4;
+    });
+    
+    // Process total columns
+    const totalAbsences = Number(row[column] || 0);
+    const frequency = Number(row[column + 1] || 0);
+    const yearlyAbsences = Number(row[column + 2] || 0);
+    const yearlyFrequency = Number(row[column + 3] || 0);
+    
+    students.push({
+      id: i - headerRow,
+      name,
+      status,
+      averageGrade: subjectCount > 0 ? totalGrade / subjectCount : 0,
+      behavioralCodes: [],
+      subjects: studentSubjects,
+      totalAbsences,
+      frequency,
+      yearlyAbsences,
+      yearlyFrequency
+    });
+  }
+  
+  return students;
+}
 
 function extractClassNameFromHeader(jsonData: any[]): string {
-  // Procuramos pela linha que contém "Turma:" no arquivo
   for (let i = 0; i < 10; i++) {
     const row = jsonData[i];
     if (row && Array.isArray(row) && row.length > 1) {
@@ -87,7 +182,6 @@ function extractClassNameFromHeader(jsonData: any[]): string {
 }
 
 function extractYearFromHeader(jsonData: any[]): string {
-  // Procuramos pela linha que contém "Ano Letivo:" no arquivo
   for (let i = 0; i < 10; i++) {
     const row = jsonData[i];
     if (row && Array.isArray(row) && row.length > 1) {
@@ -101,7 +195,6 @@ function extractYearFromHeader(jsonData: any[]): string {
 }
 
 function extractPeriodFromHeader(jsonData: any[]): string {
-  // Procuramos pela linha que contém informações do período/bimestre
   for (let i = 0; i < 10; i++) {
     const row = jsonData[i];
     if (row && Array.isArray(row) && row.length > 1) {
@@ -112,114 +205,4 @@ function extractPeriodFromHeader(jsonData: any[]): string {
     }
   }
   return 'Período não identificado';
-}
-
-function extractSubjects(jsonData: any[]): string[] {
-  // Procuramos pela linha de cabeçalho que contém os nomes das disciplinas
-  // Geralmente esta linha tem "ALUNO", "SITUAÇÃO", etc.
-  let headerRow: any[] = [];
-  let headerRowIndex = -1;
-  
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    if (row && Array.isArray(row) && row.length > 2) {
-      const firstCol = String(row[0] || '').toUpperCase();
-      if (firstCol === 'ALUNO') {
-        headerRow = row;
-        headerRowIndex = i;
-        break;
-      }
-    }
-  }
-  
-  if (headerRowIndex === -1) return [];
-  
-  // Ignora as primeiras colunas que são administrativas (ALUNO, SITUAÇÃO, etc.)
-  // e pega apenas os nomes das disciplinas
-  const subjects: string[] = [];
-  for (let i = 2; i < headerRow.length; i++) {
-    const colName = String(headerRow[i] || '');
-    if (colName && !colName.includes('TOTAL') && !colName.includes('%')) {
-      subjects.push(colName);
-    }
-  }
-  
-  return subjects;
-}
-
-function processStudentRows(jsonData: any[]): Student[] {
-  // Encontra a linha de cabeçalho primeiro
-  let headerRowIndex = -1;
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    if (row && Array.isArray(row) && row.length > 2) {
-      const firstCol = String(row[0] || '').toUpperCase();
-      if (firstCol === 'ALUNO') {
-        headerRowIndex = i;
-        break;
-      }
-    }
-  }
-  
-  if (headerRowIndex === -1) return [];
-  
-  const headerRow = jsonData[headerRowIndex];
-  const students: Student[] = [];
-  
-  // Mapeia os índices das colunas importantes
-  const nameIndex = headerRow.findIndex((col: string) => String(col).toUpperCase() === 'ALUNO');
-  const statusIndex = headerRow.findIndex((col: string) => String(col).toUpperCase() === 'SITUAÇÃO');
-  
-  // Encontra os índices das disciplinas
-  const subjectIndices: { [key: string]: number } = {};
-  for (let i = 0; i < headerRow.length; i++) {
-    const colName = String(headerRow[i] || '');
-    if (colName && !colName.includes('TOTAL') && !colName.includes('%') && 
-        colName.toUpperCase() !== 'ALUNO' && colName.toUpperCase() !== 'SITUAÇÃO') {
-      subjectIndices[colName] = i;
-    }
-  }
-  
-  // Processa as linhas dos alunos
-  for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    if (!row || !Array.isArray(row) || row.length < 3) continue;
-    
-    const name = String(row[nameIndex] || '');
-    if (!name) continue; // Pula linhas sem nome
-    
-    const status = String(row[statusIndex] || 'Ativo');
-    
-    // Extrai as notas das disciplinas
-    const subjects: Record<string, number> = {};
-    let totalGrade = 0;
-    let subjectCount = 0;
-    
-    Object.entries(subjectIndices).forEach(([subjectName, index]) => {
-      if (index < row.length) {
-        const gradeValue = row[index];
-        // Converte para número se possível, ou usa 0
-        const grade = typeof gradeValue === 'number' ? gradeValue : 
-                     !isNaN(Number(gradeValue)) ? Number(gradeValue) : 0;
-        
-        subjects[subjectName] = grade;
-        totalGrade += grade;
-        subjectCount++;
-      }
-    });
-    
-    // Calcula a média
-    const averageGrade = subjectCount > 0 ? totalGrade / subjectCount : 0;
-    
-    students.push({
-      id: i - headerRowIndex, // Gera um ID baseado na posição
-      name,
-      status,
-      averageGrade,
-      behavioralCodes: [], // Inicialmente vazio, será preenchido depois
-      subjects,
-    });
-  }
-  
-  return students;
 }
