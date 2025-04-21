@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 
 const NotFound = () => {
