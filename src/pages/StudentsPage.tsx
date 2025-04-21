@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, AlertCircle, CheckCircle, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 
-// Mock data for students
 const mockStudents = [
   { id: 1, name: 'Ana Beatriz Lima da Silva', status: 'Ativo', averageGrade: 7.5, behavioralCode: null, subjects: { 'Matemática': 8, 'Português': 7, 'História': 8, 'Geografia': 7, 'Ciências': 7 } },
   { id: 2, name: 'Amanda Ramos Oliveira Silva', status: 'Ativo', averageGrade: 6.2, behavioralCode: null, subjects: { 'Matemática': 6, 'Português': 5, 'História': 7, 'Geografia': 7, 'Ciências': 6 } },
@@ -22,7 +20,6 @@ const mockStudents = [
   { id: 7, name: 'Emily Rodrigues Conceição', status: 'Ativo', averageGrade: 6.8, behavioralCode: null, subjects: { 'Matemática': 7, 'Português': 6, 'História': 7, 'Geografia': 7, 'Ciências': 7 } },
 ];
 
-// Behavioral classification options
 const behavioralOptions = [
   { value: '1', label: '1 - Atitude Positiva' },
   { value: '2', label: '2 - Precisa de Atenção' },
@@ -38,12 +35,11 @@ const StudentsPage = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-  // Filter students based on search term and status
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'below-average' && student.averageGrade < 7) ||
-                          (filterStatus === 'above-average' && student.averageGrade >= 7) ||
+                          (filterStatus === 'below-average' && student.averageGrade < 5) ||
+                          (filterStatus === 'above-average' && student.averageGrade >= 5) ||
                           (filterStatus === 'not-classified' && student.behavioralCode === null) ||
                           (filterStatus === 'classified' && student.behavioralCode !== null);
     return matchesSearch && matchesStatus;
@@ -74,7 +70,7 @@ const StudentsPage = () => {
   };
 
   const getBadgeForGrade = (grade: number) => {
-    if (grade >= 7) {
+    if (grade >= 5) {
       return <Badge className="bg-council-success">Aprovado</Badge>;
     } else {
       return <Badge variant="destructive">Abaixo da Média</Badge>;
@@ -146,7 +142,7 @@ const StudentsPage = () => {
                             </p>
                           </div>
                           <div>
-                            {student.averageGrade < 7 && (
+                            {student.averageGrade < 5 && (
                               <div className={`h-2 w-2 rounded-full ${selectedStudent?.id === student.id ? 'bg-red-300' : 'bg-red-500'}`}></div>
                             )}
                           </div>
@@ -209,7 +205,7 @@ const StudentsPage = () => {
                               <TableCell className="font-medium">{subject}</TableCell>
                               <TableCell className="text-right">{grade}</TableCell>
                               <TableCell className="text-right">
-                                {grade >= 7 ? (
+                                {grade >= 5 ? (
                                   <span className="text-green-600 flex items-center justify-end">
                                     <CheckCircle className="h-4 w-4 mr-1" />
                                     Aprovado
@@ -227,7 +223,7 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Média Geral</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.averageGrade.toFixed(1)}</TableCell>
                             <TableCell className="text-right">
-                              {selectedStudent.averageGrade >= 7 ? (
+                              {selectedStudent.averageGrade >= 5 ? (
                                 <span className="text-green-600 flex items-center justify-end">
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Aprovado
