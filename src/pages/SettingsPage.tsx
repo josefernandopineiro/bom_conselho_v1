@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Settings, Save, Plus, Trash } from 'lucide-react';
+import { Settings, Save, Plus, Trash, CircleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +11,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 const SettingsPage = () => {
   const { toast } = useToast();
 
-  // School information state
   const [schoolInfo, setSchoolInfo] = useState({
     name: 'Escola Técnica Estadual',
     director: 'Maria Silva',
@@ -22,7 +20,6 @@ const SettingsPage = () => {
     email: 'contato@escola.edu.br',
   });
 
-  // Carrega códigos comportamentais do localStorage ou usa o padrão
   const [behavioralCodes, setBehavioralCodes] = useState(() => {
     const savedCodes = localStorage.getItem('behavioralCodes');
     return savedCodes ? JSON.parse(savedCodes) : [
@@ -34,7 +31,6 @@ const SettingsPage = () => {
     ];
   });
 
-  // New code form state
   const [newCode, setNewCode] = useState({ code: '', description: '', color: '#000000' });
   const [error, setError] = useState<string | null>(null);
 
@@ -70,13 +66,11 @@ const SettingsPage = () => {
       return;
     }
 
-    // Check if code already exists
     if (behavioralCodes.some(code => code.code === newCode.code)) {
       setError('Este código já existe. Por favor, use um código diferente.');
       return;
     }
 
-    // Limite de 10 códigos
     if (behavioralCodes.length >= 10) {
       setError('Limite máximo de 10 códigos comportamentais atingido.');
       return;
@@ -286,7 +280,7 @@ const SettingsPage = () => {
 
                 {error && (
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
+                    <CircleAlert className="h-4 w-4" />
                     <AlertTitle>Erro</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
