@@ -15,7 +15,9 @@ export interface Student {
   frequency: number;
   yearlyAbsences: number;
   yearlyFrequency: number;
-  lowFrequency?: boolean;
+  lowFrequency: boolean;
+  manualFrequency?: boolean; // Flag para indicar se a frequência foi calculada manualmente
+  totalClasses?: number; // Total de aulas no período (se disponível)
 }
 
 export interface ClassData {
@@ -25,6 +27,7 @@ export interface ClassData {
   totalStudents: number;
   belowAverageCount: number;
   subjects: string[];
+  totalClassesPerPeriod?: number; // Novo campo para o total de aulas no período
 }
 
 export interface BehavioralCode {

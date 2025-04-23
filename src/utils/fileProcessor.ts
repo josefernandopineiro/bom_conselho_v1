@@ -26,12 +26,14 @@ export const processMapaoFile = (file: File): Promise<{
           totalStudents: 0,
           belowAverageCount: 0,
           subjects: extractSubjects(jsonData),
+          totalClassesPerPeriod: estimateTotalClasses(jsonData),
         };
         
         console.log('Extracted subjects:', classData.subjects);
+        console.log('Estimated total classes:', classData.totalClassesPerPeriod);
         
         // Process student rows
-        const students = processStudentRows(jsonData, classData.subjects);
+        const students = processStudentRows(jsonData, classData.subjects, classData.totalClassesPerPeriod);
         
         // Update class data counts
         classData.totalStudents = students.length;
@@ -52,6 +54,27 @@ export const processMapaoFile = (file: File): Promise<{
   });
 };
 
+function estimateTotalClasses(jsonData: any[]): number | undefined {
+  const defaultClasses = 100;
+  
+  for (let i = 0; i < 20; i++) {
+    const row = jsonData[i];
+    if (row && Array.isArray(row)) {
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j] || '').toLowerCase();
+        if (cell.includes('total de aulas') || cell.includes('aulas totais')) {
+          const nextCell = row[j + 1];
+          if (nextCell && !isNaN(Number(nextCell))) {
+            return Number(nextCell);
+          }
+        }
+      }
+    }
+  }
+  
+  return defaultClasses;
+}
+
 function findHeaderRow(jsonData: any[]): number {
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i];
@@ -69,13 +92,11 @@ function extractSubjects(jsonData: any[]): string[] {
   const header = jsonData[headerRow];
   const subjects: string[] = [];
   
-  // Start from column 2 (after ALUNO and Situação)
   let col = 2;
   
   while (col < header.length) {
     const cell = String(header[col] || '').trim();
     
-    // If we find a subject name (not one of the special columns)
     if (cell && 
         cell !== 'Nº' && 
         cell !== 'M' && 
@@ -87,15 +108,12 @@ function extractSubjects(jsonData: any[]): string[] {
         cell !== 'FT An' && 
         cell !== 'Fre An(%)') {
       
-      // Add the subject if it's not already in the list
       if (!subjects.includes(cell)) {
         subjects.push(cell);
       }
       
-      // Skip the 4 columns for this subject (Nº, M, F, AC)
       col += 4;
     } else {
-      // Move to the next column
       col++;
     }
   }
@@ -103,23 +121,20 @@ function extractSubjects(jsonData: any[]): string[] {
   return subjects;
 }
 
-function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
+function processStudentRows(jsonData: any[], subjects: string[], totalClassesPerPeriod?: number): Student[] {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
   
   const header = jsonData[headerRow];
   const students: Student[] = [];
   
-  // Map column indices to subjects
   const subjectColumns: Record<string, number> = {};
-  let col = 2; // Start after ALUNO and Situação
+  let col = 2;
   
   subjects.forEach(subject => {
-    // Find where this subject starts in the header
     while (col < header.length) {
       if (String(header[col]).trim() === subject) {
         subjectColumns[subject] = col;
-        // Move past this subject's columns (Nº, M, F, AC)
         col += 4;
         break;
       }
@@ -127,8 +142,8 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     }
   });
   
-  // Find the special columns (TOTAL, TF, Fre(%), FT An, Fre An(%))
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
+  
   for (let i = 0; i < header.length; i++) {
     const cellValue = String(header[i] || '').trim();
     if (cellValue === 'TOTAL') totalCol = i;
@@ -140,7 +155,6 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
   
   console.log('Special columns:', { totalCol, tfCol, freqCol, ftAnCol, freqAnCol });
   
-  // Process each student
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
     if (!row || !Array.isArray(row) || !row[0]) continue;
@@ -148,14 +162,13 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     const name = String(row[0]);
     const status = String(row[1] || '');
     
-    // Skip non-active students
     if (status.toLowerCase() !== 'ativo') continue;
     
     const studentSubjects: Record<string, any> = {};
     let totalGrade = 0;
     let subjectCount = 0;
+    let totalSubjectAbsences = 0;
     
-    // Process each subject for this student
     subjects.forEach(subject => {
       const subjectStartCol = subjectColumns[subject];
       if (subjectStartCol !== undefined) {
@@ -169,48 +182,69 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
         studentSubjects[subject] = subjectData;
         totalGrade += subjectData.grade;
         subjectCount++;
+        totalSubjectAbsences += subjectData.absences;
       }
     });
     
-    // Process total columns
     let totalAbsences = 0;
-    let frequency = 0; // Default to 0 instead of 100
-    let yearlyAbsences = 0;
-    let yearlyFrequency = 0; // Default to 0 instead of 100
-    
-    // Extract values directly from the correct columns
     if (tfCol > -1) totalAbsences = Number(row[tfCol] || 0);
     
-    // Handle frequency values
+    if (totalAbsences === 0 && totalSubjectAbsences > 0) {
+      totalAbsences = totalSubjectAbsences;
+    }
+    
+    const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences;
+    
+    let frequency = 0;
+    let yearlyFrequency = 0;
+    let manualFrequency = false;
+    
     if (freqCol > -1) {
       frequency = calculateFrequencyValue(row[freqCol]);
-      console.log(`Student ${name} period frequency:`, { 
-        rawValue: row[freqCol], 
-        calculatedFrequency: frequency 
-      });
+      console.log(`Student ${name} original frequency value:`, row[freqCol], "calculated:", frequency);
     }
     
-    if (ftAnCol > -1) yearlyAbsences = Number(row[ftAnCol] || 0);
-    
-    // Handle yearly frequency
     if (freqAnCol > -1) {
       yearlyFrequency = calculateFrequencyValue(row[freqAnCol]);
-      console.log(`Student ${name} yearly frequency:`, {
-        rawValue: row[freqAnCol],
-        calculatedYearlyFrequency: yearlyFrequency
-      });
     }
     
-    // Calculate lowFrequency based on proper percentage values
+    if (frequency <= 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
+      const attendedClasses = totalClassesPerPeriod - totalAbsences;
+      frequency = (attendedClasses / totalClassesPerPeriod) * 100;
+      manualFrequency = true;
+      console.log(`Student ${name} manual frequency calculation:`, 
+        { totalClasses: totalClassesPerPeriod, absences: totalAbsences, calculated: frequency });
+    }
+    
+    if (frequency <= 0) {
+      frequency = totalAbsences > 10 ? 65 : 75;
+      manualFrequency = true;
+      console.log(`Student ${name} default frequency assigned:`, frequency);
+    }
+    
+    if (yearlyFrequency <= 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
+      const estimatedYearlyClasses = totalClassesPerPeriod * 1.5;
+      const attendedYearlyClasses = estimatedYearlyClasses - yearlyAbsences;
+      yearlyFrequency = (attendedYearlyClasses / estimatedYearlyClasses) * 100;
+      manualFrequency = true;
+    }
+    
+    if (yearlyFrequency <= 0) {
+      yearlyFrequency = frequency;
+      manualFrequency = true;
+    }
+    
+    frequency = Math.max(0, Math.min(100, frequency));
+    yearlyFrequency = Math.max(0, Math.min(100, yearlyFrequency));
+    
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
     
-    console.log(`Student ${name} frequencies:`, { 
+    console.log(`Student ${name} final frequencies:`, { 
       totalAbsences, 
       frequency, 
       yearlyAbsences, 
       yearlyFrequency,
-      rawFreq: row[freqCol],
-      rawFreqAn: row[freqAnCol],
+      manualFrequency,
       lowFrequency
     });
     
@@ -225,50 +259,39 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
       frequency,
       yearlyAbsences,
       yearlyFrequency,
-      lowFrequency
+      lowFrequency,
+      manualFrequency,
+      totalClasses: totalClassesPerPeriod
     });
   }
   
   return students;
 }
 
-/**
- * Calculates the frequency value from various formats
- * @param value - The raw frequency value from the Excel file
- * @returns The calculated frequency percentage
- */
 function calculateFrequencyValue(value: any): number {
-  // Handle null or undefined
   if (value === null || value === undefined) {
     return 0;
   }
   
-  // Convert to string to handle all cases uniformly
   const strValue = String(value).trim();
   
-  // Handle empty string
   if (strValue === '') {
     return 0;
   }
   
-  // Try to extract numeric value
-  let numericValue: number;
+  const numericMatch = strValue.match(/(\d+([,.]\d+)?)/);
   
-  // Check if it's in percentage format like "75%"
-  if (strValue.includes('%')) {
-    numericValue = parseFloat(strValue.replace('%', '').trim());
-  } 
-  // Check if it's in decimal format like "0.75"
-  else if (strValue.includes('.') && parseFloat(strValue) < 1) {
-    numericValue = parseFloat(strValue) * 100;
-  } 
-  // Otherwise try to parse it as a plain number
-  else {
-    numericValue = parseFloat(strValue);
+  if (numericMatch) {
+    let numericValue = parseFloat(numericMatch[0].replace(',', '.'));
+    
+    if (numericValue < 1) {
+      numericValue = numericValue * 100;
+    }
+    
+    return numericValue;
   }
   
-  // Return valid number or 0 if parsing failed
-  return isNaN(numericValue) ? 0 : numericValue;
+  return 0;
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {
