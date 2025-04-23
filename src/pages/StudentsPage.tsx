@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, AlertCircle, CheckCircle, Filter, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,20 +11,17 @@ import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 
-const behavioralOptions = [
-  { value: '1', label: '1 - Atitude Positiva' },
-  { value: '2', label: '2 - Precisa de Atenção' },
-  { value: '3', label: '3 - Dificuldade de Aprendizagem' },
-  { value: '4', label: '4 - Problemas de Comportamento' },
-  { value: '5', label: '5 - Encaminhamento Necessário' },
-];
-
 const StudentsPage = () => {
   const { toast } = useToast();
   const { students, updateStudentBehavioralCodes, behavioralCodes } = useStudents();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  const behavioralOptions = behavioralCodes.map(code => ({
+    value: code.code,
+    label: `${code.code} - ${code.description}`
+  }));
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -45,14 +41,12 @@ const StudentsPage = () => {
   const handleBehavioralChange = (value: string) => {
     if (!selectedStudent) return;
 
-    // Update behavioral codes
     const updatedCodes = selectedStudent.behavioralCodes.includes(value)
       ? selectedStudent.behavioralCodes.filter((code: string) => code !== value)
       : [...selectedStudent.behavioralCodes, value];
 
     updateStudentBehavioralCodes(selectedStudent.id, updatedCodes);
     
-    // Update selected student locally
     setSelectedStudent({
       ...selectedStudent,
       behavioralCodes: updatedCodes
@@ -73,7 +67,6 @@ const StudentsPage = () => {
     }
   };
 
-  // Helper function to safely format numbers with toFixed
   const safeToFixed = (value: number | null | undefined, digits: number = 1) => {
     if (value === null || value === undefined) {
       return "0";
@@ -339,41 +332,22 @@ const StudentsPage = () => {
                         <div className="bg-gray-50 p-4 rounded-md">
                           <h3 className="font-medium text-gray-900 mb-2">Descrição das Classificações</h3>
                           <div className="space-y-3 text-sm">
-                            <div className="flex items-start space-x-2">
-                              <div className="bg-green-100 text-green-800 font-semibold px-2 py-1 rounded">1</div>
-                              <div>
-                                <p className="font-medium">Atitude Positiva</p>
-                                <p className="text-gray-600">Aluno participativo e comprometido com o aprendizado.</p>
+                            {behavioralCodes.map(code => (
+                              <div key={code.code} className="flex items-start space-x-2">
+                                <div 
+                                  className="font-semibold px-2 py-1 rounded" 
+                                  style={{ 
+                                    backgroundColor: `${code.color}20`, 
+                                    color: code.color 
+                                  }}
+                                >
+                                  {code.code}
+                                </div>
+                                <div>
+                                  <p className="font-medium">{code.description}</p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-start space-x-2">
-                              <div className="bg-yellow-100 text-yellow-800 font-semibold px-2 py-1 rounded">2</div>
-                              <div>
-                                <p className="font-medium">Precisa de Atenção</p>
-                                <p className="text-gray-600">Aluno com potencial, mas necessita de acompanhamento mais próximo.</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start space-x-2">
-                              <div className="bg-orange-100 text-orange-800 font-semibold px-2 py-1 rounded">3</div>
-                              <div>
-                                <p className="font-medium">Dificuldade de Aprendizagem</p>
-                                <p className="text-gray-600">Aluno com dificuldades específicas que requerem intervenção pedagógica.</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start space-x-2">
-                              <div className="bg-red-100 text-red-800 font-semibold px-2 py-1 rounded">4</div>
-                              <div>
-                                <p className="font-medium">Problemas de Comportamento</p>
-                                <p className="text-gray-600">Aluno com desafios comportamentais que afetam o aprendizado.</p>
-                              </div>
-                            </div>
-                            <div className="flex items-start space-x-2">
-                              <div className="bg-purple-100 text-purple-800 font-semibold px-2 py-1 rounded">5</div>
-                              <div>
-                                <p className="font-medium">Encaminhamento Necessário</p>
-                                <p className="text-gray-600">Aluno que precisa de apoio especializado além do ambiente escolar.</p>
-                              </div>
-                            </div>
+                            ))}
                           </div>
                         </div>
                       </div>

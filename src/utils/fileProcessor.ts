@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -128,14 +127,18 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     }
   });
   
-  // Find the TOTAL column
-  let totalColumn = -1;
+  // Find the special columns (TOTAL, TF, Fre(%), FT An, Fre An(%))
+  let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
   for (let i = 0; i < header.length; i++) {
-    if (String(header[i]).trim() === 'TOTAL') {
-      totalColumn = i;
-      break;
-    }
+    const cellValue = String(header[i] || '').trim();
+    if (cellValue === 'TOTAL') totalCol = i;
+    else if (cellValue === 'TF') tfCol = i;
+    else if (cellValue === 'Fre(%)') freqCol = i;
+    else if (cellValue === 'FT An') ftAnCol = i;
+    else if (cellValue === 'Fre An(%)') freqAnCol = i;
   }
+  
+  console.log('Special columns:', { totalCol, tfCol, freqCol, ftAnCol, freqAnCol });
   
   // Process each student
   for (let i = headerRow + 1; i < jsonData.length; i++) {
@@ -175,14 +178,33 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     let yearlyAbsences = 0;
     let yearlyFrequency = 100;
     
-    if (totalColumn > -1) {
-      totalAbsences = Number(row[totalColumn + 1] || 0);
-      frequency = Number(row[totalColumn + 2] || 100);
-      yearlyAbsences = Number(row[totalColumn + 3] || 0);
-      yearlyFrequency = Number(row[totalColumn + 4] || 100);
+    // Extract values directly from the correct columns
+    if (tfCol > -1) totalAbsences = Number(row[tfCol] || 0);
+    
+    // Handle the frequency as text - extract percentage from text value
+    if (freqCol > -1) {
+      const freqText = String(row[freqCol] || '100%');
+      frequency = parseFrequencyValue(freqText);
+    }
+    
+    if (ftAnCol > -1) yearlyAbsences = Number(row[ftAnCol] || 0);
+    
+    // Handle yearly frequency as text
+    if (freqAnCol > -1) {
+      const freqAnText = String(row[freqAnCol] || '100%');
+      yearlyFrequency = parseFrequencyValue(freqAnText);
     }
     
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
+    
+    console.log(`Student ${name} frequencies:`, { 
+      totalAbsences, 
+      frequency: `${frequency}%`, 
+      yearlyAbsences, 
+      yearlyFrequency: `${yearlyFrequency}%`,
+      rawFreq: row[freqCol],
+      rawFreqAn: row[freqAnCol]
+    });
     
     students.push({
       id: i - headerRow,
@@ -200,6 +222,13 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
   }
   
   return students;
+}
+
+function parseFrequencyValue(value: string): number {
+  // Remove any non-numeric characters except decimal point
+  const numericString = value.replace(/[^\d.]/g, '');
+  const parsedValue = parseFloat(numericString);
+  return isNaN(parsedValue) ? 100 : parsedValue;
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {
