@@ -73,6 +73,14 @@ const StudentsPage = () => {
     }
   };
 
+  // Helper function to safely format numbers with toFixed
+  const safeToFixed = (value: number | null | undefined, digits: number = 1) => {
+    if (value === null || value === undefined) {
+      return "0";
+    }
+    return value.toFixed(digits);
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -135,7 +143,7 @@ const StudentsPage = () => {
                               {student.name}
                             </h3>
                             <p className={`text-sm ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
-                              Média: {student.averageGrade.toFixed(1)}
+                              Média: {safeToFixed(student.averageGrade)}
                               {student.lowFrequency && (
                                 <span className="ml-2 inline-flex items-center text-amber-600">
                                   <AlertTriangle className="h-3 w-3 mr-1" />
@@ -191,7 +199,7 @@ const StudentsPage = () => {
                       {selectedStudent.lowFrequency && (
                         <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
-                          Baixa Frequência ({selectedStudent.frequency.toFixed(0)}%)
+                          Baixa Frequência ({safeToFixed(selectedStudent.frequency, 0)}%)
                         </Badge>
                       )}
                       {getBadgeForGrade(selectedStudent.averageGrade)}
@@ -237,7 +245,7 @@ const StudentsPage = () => {
                           ))}
                           <TableRow className="bg-gray-50">
                             <TableCell className="font-bold">Média Geral</TableCell>
-                            <TableCell className="text-right font-bold">{selectedStudent.averageGrade.toFixed(1)}</TableCell>
+                            <TableCell className="text-right font-bold">{safeToFixed(selectedStudent.averageGrade)}</TableCell>
                             <TableCell className="text-right">
                               {selectedStudent.averageGrade >= 5 ? (
                                 <span className="text-green-600 flex items-center justify-end">
@@ -277,7 +285,7 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Período)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.totalAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {selectedStudent.frequency.toFixed(0)}%
+                              Frequência: {safeToFixed(selectedStudent.frequency, 0)}%
                               {selectedStudent.frequency < 70 && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
@@ -290,7 +298,7 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Anual)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.yearlyAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {selectedStudent.yearlyFrequency.toFixed(0)}%
+                              Frequência: {safeToFixed(selectedStudent.yearlyFrequency, 0)}%
                               {selectedStudent.yearlyFrequency < 70 && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
