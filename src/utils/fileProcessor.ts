@@ -174,25 +174,31 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     
     // Process total columns
     let totalAbsences = 0;
-    let frequency = 100;
+    let frequency = 0; // Default to 0 instead of 100
     let yearlyAbsences = 0;
-    let yearlyFrequency = 100;
+    let yearlyFrequency = 0; // Default to 0 instead of 100
     
     // Extract values directly from the correct columns
     if (tfCol > -1) totalAbsences = Number(row[tfCol] || 0);
     
-    // Handle the frequency as text - extract percentage from text value
+    // Handle frequency values
     if (freqCol > -1) {
-      const freqValue = row[freqCol];
-      frequency = parseFrequencyValue(freqValue);
+      frequency = calculateFrequencyValue(row[freqCol]);
+      console.log(`Student ${name} period frequency:`, { 
+        rawValue: row[freqCol], 
+        calculatedFrequency: frequency 
+      });
     }
     
     if (ftAnCol > -1) yearlyAbsences = Number(row[ftAnCol] || 0);
     
-    // Handle yearly frequency as text
+    // Handle yearly frequency
     if (freqAnCol > -1) {
-      const freqAnValue = row[freqAnCol];
-      yearlyFrequency = parseFrequencyValue(freqAnValue);
+      yearlyFrequency = calculateFrequencyValue(row[freqAnCol]);
+      console.log(`Student ${name} yearly frequency:`, {
+        rawValue: row[freqAnCol],
+        calculatedYearlyFrequency: yearlyFrequency
+      });
     }
     
     // Calculate lowFrequency based on proper percentage values
@@ -226,44 +232,43 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
   return students;
 }
 
-function parseFrequencyValue(value: any): number {
-  // Handle null or undefined values
+/**
+ * Calculates the frequency value from various formats
+ * @param value - The raw frequency value from the Excel file
+ * @returns The calculated frequency percentage
+ */
+function calculateFrequencyValue(value: any): number {
+  // Handle null or undefined
   if (value === null || value === undefined) {
-    return 100;
+    return 0;
   }
   
-  // If it's already a number, convert it to a percentage
-  if (typeof value === 'number') {
-    // If the value is in decimal format (e.g., 0.84), convert to percentage
-    if (value < 1) {
-      return value * 100;
-    }
-    return value;
+  // Convert to string to handle all cases uniformly
+  const strValue = String(value).trim();
+  
+  // Handle empty string
+  if (strValue === '') {
+    return 0;
   }
   
-  // If it's a string, remove any non-numeric characters except decimal point
-  if (typeof value === 'string') {
-    // Handle empty string
-    if (value.trim() === '') {
-      return 100;
-    }
-    
-    // Remove any non-numeric characters except decimal point
-    const numericString = value.replace(/[^\d.]/g, '');
-    const parsedValue = parseFloat(numericString);
-    
-    // If the parsed value is a valid number
-    if (!isNaN(parsedValue)) {
-      // If the value is in decimal format (e.g., 0.84), convert to percentage
-      if (parsedValue < 1) {
-        return parsedValue * 100;
-      }
-      return parsedValue;
-    }
+  // Try to extract numeric value
+  let numericValue: number;
+  
+  // Check if it's in percentage format like "75%"
+  if (strValue.includes('%')) {
+    numericValue = parseFloat(strValue.replace('%', '').trim());
+  } 
+  // Check if it's in decimal format like "0.75"
+  else if (strValue.includes('.') && parseFloat(strValue) < 1) {
+    numericValue = parseFloat(strValue) * 100;
+  } 
+  // Otherwise try to parse it as a plain number
+  else {
+    numericValue = parseFloat(strValue);
   }
   
-  // Default return if all else fails
-  return 100;
+  // Return valid number or 0 if parsing failed
+  return isNaN(numericValue) ? 0 : numericValue;
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {

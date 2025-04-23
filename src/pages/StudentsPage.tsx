@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Search, AlertCircle, CheckCircle, Filter, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const StudentsPage = () => {
   const { toast } = useToast();
@@ -77,6 +77,11 @@ const StudentsPage = () => {
 
   const isLowFrequency = (frequency: number) => {
     return frequency < 70;
+  };
+
+  const formatFrequency = (frequency: number) => {
+    // Ensure we're displaying a valid number
+    return isNaN(frequency) ? '0%' : `${Math.round(frequency)}%`;
   };
 
   return (
@@ -283,7 +288,7 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Período)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.totalAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {Math.round(selectedStudent.frequency)}%
+                              Frequência: {formatFrequency(selectedStudent.frequency)}
                               {isLowFrequency(selectedStudent.frequency) && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
@@ -296,7 +301,7 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Anual)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.yearlyAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {Math.round(selectedStudent.yearlyFrequency)}%
+                              Frequência: {formatFrequency(selectedStudent.yearlyFrequency)}
                               {isLowFrequency(selectedStudent.yearlyFrequency) && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
