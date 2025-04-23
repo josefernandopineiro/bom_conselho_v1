@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const StudentsPage = () => {
   const { toast } = useToast();
@@ -72,6 +73,10 @@ const StudentsPage = () => {
       return "0";
     }
     return value.toFixed(digits);
+  };
+
+  const isLowFrequency = (frequency: number) => {
+    return frequency < 70;
   };
 
   return (
@@ -192,7 +197,7 @@ const StudentsPage = () => {
                       {selectedStudent.lowFrequency && (
                         <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
-                          Baixa Frequência ({safeToFixed(selectedStudent.frequency, 0)}%)
+                          Baixa Frequência ({Math.round(selectedStudent.frequency)}%)
                         </Badge>
                       )}
                       {getBadgeForGrade(selectedStudent.averageGrade)}
@@ -278,8 +283,8 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Período)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.totalAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {safeToFixed(selectedStudent.frequency, 0)}%
-                              {selectedStudent.frequency < 70 && (
+                              Frequência: {Math.round(selectedStudent.frequency)}%
+                              {isLowFrequency(selectedStudent.frequency) && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
                                   Baixa
@@ -291,8 +296,8 @@ const StudentsPage = () => {
                             <TableCell className="font-bold">Total (Anual)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.yearlyAbsences}</TableCell>
                             <TableCell className="text-right">
-                              Frequência: {safeToFixed(selectedStudent.yearlyFrequency, 0)}%
-                              {selectedStudent.yearlyFrequency < 70 && (
+                              Frequência: {Math.round(selectedStudent.yearlyFrequency)}%
+                              {isLowFrequency(selectedStudent.yearlyFrequency) && (
                                 <span className="ml-2 text-amber-500 flex items-center justify-end">
                                   <AlertTriangle className="h-4 w-4 mr-1" />
                                   Baixa

@@ -183,27 +183,29 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
     
     // Handle the frequency as text - extract percentage from text value
     if (freqCol > -1) {
-      const freqText = String(row[freqCol] || '100%');
-      frequency = parseFrequencyValue(freqText);
+      const freqValue = row[freqCol];
+      frequency = parseFrequencyValue(freqValue);
     }
     
     if (ftAnCol > -1) yearlyAbsences = Number(row[ftAnCol] || 0);
     
     // Handle yearly frequency as text
     if (freqAnCol > -1) {
-      const freqAnText = String(row[freqAnCol] || '100%');
-      yearlyFrequency = parseFrequencyValue(freqAnText);
+      const freqAnValue = row[freqAnCol];
+      yearlyFrequency = parseFrequencyValue(freqAnValue);
     }
     
+    // Calculate lowFrequency based on proper percentage values
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
     
     console.log(`Student ${name} frequencies:`, { 
       totalAbsences, 
-      frequency: `${frequency}%`, 
+      frequency, 
       yearlyAbsences, 
-      yearlyFrequency: `${yearlyFrequency}%`,
+      yearlyFrequency,
       rawFreq: row[freqCol],
-      rawFreqAn: row[freqAnCol]
+      rawFreqAn: row[freqAnCol],
+      lowFrequency
     });
     
     students.push({
@@ -224,11 +226,44 @@ function processStudentRows(jsonData: any[], subjects: string[]): Student[] {
   return students;
 }
 
-function parseFrequencyValue(value: string): number {
-  // Remove any non-numeric characters except decimal point
-  const numericString = value.replace(/[^\d.]/g, '');
-  const parsedValue = parseFloat(numericString);
-  return isNaN(parsedValue) ? 100 : parsedValue;
+function parseFrequencyValue(value: any): number {
+  // Handle null or undefined values
+  if (value === null || value === undefined) {
+    return 100;
+  }
+  
+  // If it's already a number, convert it to a percentage
+  if (typeof value === 'number') {
+    // If the value is in decimal format (e.g., 0.84), convert to percentage
+    if (value < 1) {
+      return value * 100;
+    }
+    return value;
+  }
+  
+  // If it's a string, remove any non-numeric characters except decimal point
+  if (typeof value === 'string') {
+    // Handle empty string
+    if (value.trim() === '') {
+      return 100;
+    }
+    
+    // Remove any non-numeric characters except decimal point
+    const numericString = value.replace(/[^\d.]/g, '');
+    const parsedValue = parseFloat(numericString);
+    
+    // If the parsed value is a valid number
+    if (!isNaN(parsedValue)) {
+      // If the value is in decimal format (e.g., 0.84), convert to percentage
+      if (parsedValue < 1) {
+        return parsedValue * 100;
+      }
+      return parsedValue;
+    }
+  }
+  
+  // Default return if all else fails
+  return 100;
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {
