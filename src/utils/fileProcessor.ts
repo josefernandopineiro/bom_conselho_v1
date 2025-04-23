@@ -195,20 +195,21 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
     
     const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences;
     
-    let frequency = 0;
-    let yearlyFrequency = 0;
+    // Read frequency values directly from the Excel file
+    let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
+    let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
     let manualFrequency = false;
     
-    if (freqCol > -1) {
-      frequency = calculateFrequencyValue(row[freqCol]);
-      console.log(`Student ${name} original frequency value:`, row[freqCol], "calculated:", frequency);
-    }
+    // Log the raw values for debugging
+    console.log(`Student ${name} frequency data:`, {
+      rawFreq: row[freqCol],
+      rawYearlyFreq: row[freqAnCol],
+      convertedFreq: frequency,
+      convertedYearlyFreq: yearlyFrequency
+    });
     
-    if (freqAnCol > -1) {
-      yearlyFrequency = calculateFrequencyValue(row[freqAnCol]);
-    }
-    
-    if (frequency <= 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
+    // Fallback when no frequency data is available
+    if (frequency === 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
       const attendedClasses = totalClassesPerPeriod - totalAbsences;
       frequency = (attendedClasses / totalClassesPerPeriod) * 100;
       manualFrequency = true;
@@ -216,27 +217,19 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
         { totalClasses: totalClassesPerPeriod, absences: totalAbsences, calculated: frequency });
     }
     
-    if (frequency <= 0) {
-      frequency = totalAbsences > 10 ? 65 : 75;
-      manualFrequency = true;
-      console.log(`Student ${name} default frequency assigned:`, frequency);
-    }
-    
-    if (yearlyFrequency <= 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
+    if (yearlyFrequency === 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
+      // Estimate yearly classes as 1.5x the period classes
       const estimatedYearlyClasses = totalClassesPerPeriod * 1.5;
       const attendedYearlyClasses = estimatedYearlyClasses - yearlyAbsences;
       yearlyFrequency = (attendedYearlyClasses / estimatedYearlyClasses) * 100;
       manualFrequency = true;
     }
     
-    if (yearlyFrequency <= 0) {
-      yearlyFrequency = frequency;
-      manualFrequency = true;
-    }
-    
+    // Ensure frequencies are within valid range
     frequency = Math.max(0, Math.min(100, frequency));
     yearlyFrequency = Math.max(0, Math.min(100, yearlyFrequency));
     
+    // Determine if this student has low frequency
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
     
     console.log(`Student ${name} final frequencies:`, { 
@@ -268,30 +261,44 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
   return students;
 }
 
-function calculateFrequencyValue(value: any): number {
+/**
+ * Converts any value to a percentage (0-100)
+ * Handles various formats:
+ * - Decimal values (0.85 becomes 85%)
+ * - Text with % (85% becomes 85)
+ * - Numbers (85 stays 85)
+ */
+function convertToPercentage(value: any): number {
   if (value === null || value === undefined) {
     return 0;
   }
   
+  // Convert to string and trim whitespace
   const strValue = String(value).trim();
   
   if (strValue === '') {
     return 0;
   }
   
-  const numericMatch = strValue.match(/(\d+([,.]\d+)?)/);
-  
-  if (numericMatch) {
-    let numericValue = parseFloat(numericMatch[0].replace(',', '.'));
-    
-    if (numericValue < 1) {
-      numericValue = numericValue * 100;
-    }
-    
-    return numericValue;
+  // If it contains a percent sign, extract the number
+  if (strValue.includes('%')) {
+    const numericPart = strValue.replace('%', '').trim();
+    return parseFloat(numericPart) || 0;
   }
   
-  return 0;
+  // Try to convert to a number
+  const numValue = parseFloat(strValue.replace(',', '.'));
+  
+  if (isNaN(numValue)) {
+    return 0;
+  }
+  
+  // If the value is a decimal less than 1, multiply by 100
+  if (numValue < 1 && numValue > 0) {
+    return numValue * 100;
+  }
+  
+  return numValue;
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {

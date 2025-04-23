@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, AlertCircle, CheckCircle, Filter, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -86,10 +85,8 @@ const StudentsPage = () => {
       return '0%';
     }
     
-    // Arredonda para um número inteiro
     const roundedFreq = Math.round(frequency);
     
-    // Retorna o valor formatado, possivelmente com um indicador se for calculado manualmente
     return `${roundedFreq}%${isManual ? '*' : ''}`;
   };
 

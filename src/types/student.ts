@@ -12,9 +12,9 @@ export interface Student {
     correctedAbsences: number;
   }>;
   totalAbsences: number;
-  frequency: number;
+  frequency: number; // Frequency as percentage (0-100)
   yearlyAbsences: number;
-  yearlyFrequency: number;
+  yearlyFrequency: number; // Yearly frequency as percentage (0-100)
   lowFrequency: boolean;
   manualFrequency?: boolean; // Flag para indicar se a frequência foi calculada manualmente
   totalClasses?: number; // Total de aulas no período (se disponível)
