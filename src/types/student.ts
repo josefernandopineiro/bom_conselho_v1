@@ -1,3 +1,4 @@
+
 export interface Student {
   id: number;
   name: string;
@@ -11,9 +12,9 @@ export interface Student {
     compensatedAbsences: number;
   }>;
   totalAbsences: number;
-  frequency: number; // Frequency as percentage (0-100)
+  frequency: number; // Frequency percentage for current period (0-100)
   yearlyAbsences: number;
-  yearlyFrequency: number; // Yearly frequency as percentage (0-100)
+  yearlyFrequency: number; // Yearly frequency percentage (0-100)
   lowFrequency: boolean;
   manualFrequency?: boolean; // Flag to indicate if frequency was calculated manually
   totalClasses?: number; // Total classes in the period (if available)
@@ -26,7 +27,7 @@ export interface ClassData {
   totalStudents: number;
   belowAverageCount: number;
   subjects: string[];
-  totalClassesPerPeriod?: number; // Novo campo para o total de aulas no período
+  totalClassesPerPeriod?: number; // Total number of classes in the period
 }
 
 export interface BehavioralCode {
