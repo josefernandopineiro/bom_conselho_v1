@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -184,12 +185,49 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       }
     });
 
+    // Get total absences and frequencies
     const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : 0;
     const frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
     const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : 0;
     const yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
 
-    const lowFrequency = frequency < 70 || yearlyFrequency < 70;
+    // Calculate manual frequency if needed
+    let manualFrequency = false;
+    let calculatedFrequency = frequency;
+    let calculatedYearlyFrequency = yearlyFrequency;
+    
+    // Log frequency data for debugging
+    console.log(`Student ${name} frequency data:`, {
+      rawFreq: row[freqCol],
+      rawYearlyFreq: row[freqAnCol],
+      convertedFreq: frequency,
+      convertedYearlyFreq: yearlyFrequency
+    });
+
+    // If frequency is 0, calculate it manually
+    if (frequency === 0 && totalClassesPerPeriod) {
+      manualFrequency = true;
+      const totalClasses = totalClassesPerPeriod;
+      calculatedFrequency = Math.max(0, ((totalClasses - totalAbsences) / totalClasses) * 100);
+      calculatedYearlyFrequency = Math.max(0, ((totalClasses * 2 - yearlyAbsences) / (totalClasses * 2)) * 100);
+      
+      console.log(`Student ${name} manual frequency calculation:`, {
+        totalClasses,
+        absences: totalAbsences,
+        calculated: calculatedFrequency
+      });
+    }
+
+    const lowFrequency = calculatedFrequency < 70 || calculatedYearlyFrequency < 70;
+
+    console.log(`Student ${name} final frequencies:`, {
+      totalAbsences,
+      frequency: calculatedFrequency,
+      yearlyAbsences,
+      yearlyFrequency: calculatedYearlyFrequency,
+      manualFrequency,
+      lowFrequency
+    });
 
     students.push({
       id: i - headerRow,
@@ -199,10 +237,12 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       behavioralCodes: [],
       subjects: studentSubjects,
       totalAbsences,
-      frequency,
+      frequency: calculatedFrequency,
       yearlyAbsences,
-      yearlyFrequency,
-      lowFrequency
+      yearlyFrequency: calculatedYearlyFrequency,
+      lowFrequency,
+      manualFrequency,
+      totalClasses: totalClassesPerPeriod
     });
   }
   
