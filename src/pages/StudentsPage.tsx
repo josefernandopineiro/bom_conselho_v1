@@ -13,6 +13,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 
+const formatFrequency = (frequency: number | undefined) => {
+  if (frequency === undefined || isNaN(frequency)) {
+    return '0%';
+  }
+  
+  const roundedFreq = Math.round(frequency);
+  return `${roundedFreq}%`;
+};
+
+const isLowFrequency = (frequency: number) => {
+  return frequency < 70;
+};
+
 const StudentsPage = () => {
   const { toast } = useToast();
   const { students, updateStudentBehavioralCodes, behavioralCodes } = useStudents();
@@ -74,20 +87,6 @@ const StudentsPage = () => {
       return "0";
     }
     return value.toFixed(digits);
-  };
-
-  const isLowFrequency = (frequency: number) => {
-    return frequency < 70;
-  };
-
-  const formatFrequency = (frequency: number | undefined, isManual = false) => {
-    if (frequency === undefined || isNaN(frequency)) {
-      return '0%';
-    }
-    
-    const roundedFreq = Math.round(frequency);
-    
-    return `${roundedFreq}%${isManual ? '*' : ''}`;
   };
 
   return (
@@ -156,7 +155,7 @@ const StudentsPage = () => {
                               {student.lowFrequency && (
                                 <span className="ml-2 inline-flex items-center text-amber-600">
                                   <AlertTriangle className="h-3 w-3 mr-1" />
-                                  Freq: {formatFrequency(student.frequency, student.manualFrequency)}
+                                  Freq: {formatFrequency(student.frequency)}
                                 </span>
                               )}
                             </p>
@@ -211,7 +210,7 @@ const StudentsPage = () => {
                       {selectedStudent.lowFrequency && (
                         <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3" />
-                          Baixa Frequência ({formatFrequency(selectedStudent.frequency, selectedStudent.manualFrequency)})
+                          Baixa Frequência ({formatFrequency(selectedStudent.frequency)})
                         </Badge>
                       )}
                       {getBadgeForGrade(selectedStudent.averageGrade)}
@@ -219,15 +218,6 @@ const StudentsPage = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {selectedStudent.manualFrequency && (
-                    <Alert className="mb-4 bg-amber-50 border-amber-200">
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        * Os valores de frequência foram estimados com base no total de faltas, pois os dados exatos não puderam ser extraídos do arquivo.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
                   <Tabs defaultValue="grades">
                     <TabsList className="mb-4">
                       <TabsTrigger value="grades">Notas</TabsTrigger>
@@ -291,7 +281,7 @@ const StudentsPage = () => {
                           <TableRow>
                             <TableHead>Disciplina</TableHead>
                             <TableHead className="text-right">Faltas</TableHead>
-                            <TableHead className="text-right">Faltas Corrigidas</TableHead>
+                            <TableHead className="text-right">Faltas Compensadas</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -299,93 +289,41 @@ const StudentsPage = () => {
                             <TableRow key={subject}>
                               <TableCell className="font-medium">{subject}</TableCell>
                               <TableCell className="text-right">{data.absences}</TableCell>
-                              <TableCell className="text-right">{data.correctedAbsences}</TableCell>
+                              <TableCell className="text-right">{data.compensatedAbsences}</TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="bg-gray-50">
                             <TableCell className="font-bold">Total (Período)</TableCell>
-                            <TableCell className="text-right font-bold">
-                              {selectedStudent.totalAbsences}
-                              {selectedStudent.totalClasses && (
-                                <span className="ml-1 text-xs text-gray-500">
-                                  de {selectedStudent.totalClasses} aulas
-                                </span>
-                              )}
-                            </TableCell>
+                            <TableCell className="text-right font-bold">{selectedStudent.totalAbsences}</TableCell>
                             <TableCell className="text-right">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="inline-flex items-center">
-                                      Frequência: {formatFrequency(selectedStudent.frequency, selectedStudent.manualFrequency)}
-                                      {selectedStudent.manualFrequency && (
-                                        <Info className="h-3 w-3 ml-1 text-gray-400" />
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  {selectedStudent.manualFrequency && (
-                                    <TooltipContent>
-                                      <p className="text-xs max-w-[200px]">
-                                        Este valor foi calculado com base nas faltas e total de aulas estimado, pois o valor exato não pôde ser extraído.
-                                      </p>
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
-                              
-                              {isLowFrequency(selectedStudent.frequency) && (
-                                <span className="ml-2 text-amber-500 flex items-center justify-end">
-                                  <AlertTriangle className="h-4 w-4 mr-1" />
-                                  Baixa
-                                </span>
-                              )}
+                              <div className="inline-flex items-center">
+                                Frequência: {formatFrequency(selectedStudent.frequency)}
+                                {isLowFrequency(selectedStudent.frequency) && (
+                                  <span className="ml-2 text-amber-500 flex items-center">
+                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                    Baixa
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                           <TableRow className="bg-gray-100">
                             <TableCell className="font-bold">Total (Anual)</TableCell>
                             <TableCell className="text-right font-bold">{selectedStudent.yearlyAbsences}</TableCell>
                             <TableCell className="text-right">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="inline-flex items-center">
-                                      Frequência: {formatFrequency(selectedStudent.yearlyFrequency, selectedStudent.manualFrequency)}
-                                      {selectedStudent.manualFrequency && (
-                                        <Info className="h-3 w-3 ml-1 text-gray-400" />
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  {selectedStudent.manualFrequency && (
-                                    <TooltipContent>
-                                      <p className="text-xs max-w-[200px]">
-                                        Este valor foi calculado com base nas faltas e total de aulas estimado, pois o valor exato não pôde ser extraído.
-                                      </p>
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
-                              
-                              {isLowFrequency(selectedStudent.yearlyFrequency) && (
-                                <span className="ml-2 text-amber-500 flex items-center justify-end">
-                                  <AlertTriangle className="h-4 w-4 mr-1" />
-                                  Baixa
-                                </span>
-                              )}
+                              <div className="inline-flex items-center">
+                                Frequência: {formatFrequency(selectedStudent.yearlyFrequency)}
+                                {isLowFrequency(selectedStudent.yearlyFrequency) && (
+                                  <span className="ml-2 text-amber-500 flex items-center">
+                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                    Baixa
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
-                      
-                      {selectedStudent.lowFrequency && (
-                        <div className="mt-4">
-                          <Alert variant="destructive" className="bg-amber-50 border-amber-300 text-amber-800">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription>
-                              Este aluno está com frequência inferior a 70%, o que pode comprometer sua aprovação mesmo que tenha notas suficientes.
-                            </AlertDescription>
-                          </Alert>
-                        </div>
-                      )}
                     </TabsContent>
                     
                     <TabsContent value="behavioral">

@@ -163,12 +163,11 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
     const status = String(row[1] || '');
     
     if (status.toLowerCase() !== 'ativo') continue;
-    
+
     const studentSubjects: Record<string, any> = {};
     let totalGrade = 0;
     let subjectCount = 0;
-    let totalSubjectAbsences = 0;
-    
+
     subjects.forEach(subject => {
       const subjectStartCol = subjectColumns[subject];
       if (subjectStartCol !== undefined) {
@@ -176,71 +175,22 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
           number: Number(row[subjectStartCol] || 0),
           grade: Number(row[subjectStartCol + 1] || 0),
           absences: Number(row[subjectStartCol + 2] || 0),
-          correctedAbsences: Number(row[subjectStartCol + 3] || 0)
+          compensatedAbsences: Number(row[subjectStartCol + 3] || 0)
         };
         
         studentSubjects[subject] = subjectData;
         totalGrade += subjectData.grade;
         subjectCount++;
-        totalSubjectAbsences += subjectData.absences;
       }
     });
-    
-    let totalAbsences = 0;
-    if (tfCol > -1) totalAbsences = Number(row[tfCol] || 0);
-    
-    if (totalAbsences === 0 && totalSubjectAbsences > 0) {
-      totalAbsences = totalSubjectAbsences;
-    }
-    
-    const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences;
-    
-    // Read frequency values directly from the Excel file
-    let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
-    let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
-    let manualFrequency = false;
-    
-    // Log the raw values for debugging
-    console.log(`Student ${name} frequency data:`, {
-      rawFreq: row[freqCol],
-      rawYearlyFreq: row[freqAnCol],
-      convertedFreq: frequency,
-      convertedYearlyFreq: yearlyFrequency
-    });
-    
-    // Fallback when no frequency data is available
-    if (frequency === 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
-      const attendedClasses = totalClassesPerPeriod - totalAbsences;
-      frequency = (attendedClasses / totalClassesPerPeriod) * 100;
-      manualFrequency = true;
-      console.log(`Student ${name} manual frequency calculation:`, 
-        { totalClasses: totalClassesPerPeriod, absences: totalAbsences, calculated: frequency });
-    }
-    
-    if (yearlyFrequency === 0 && totalClassesPerPeriod && totalClassesPerPeriod > 0) {
-      // Estimate yearly classes as 1.5x the period classes
-      const estimatedYearlyClasses = totalClassesPerPeriod * 1.5;
-      const attendedYearlyClasses = estimatedYearlyClasses - yearlyAbsences;
-      yearlyFrequency = (attendedYearlyClasses / estimatedYearlyClasses) * 100;
-      manualFrequency = true;
-    }
-    
-    // Ensure frequencies are within valid range
-    frequency = Math.max(0, Math.min(100, frequency));
-    yearlyFrequency = Math.max(0, Math.min(100, yearlyFrequency));
-    
-    // Determine if this student has low frequency
+
+    const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : 0;
+    const frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
+    const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : 0;
+    const yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
+
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
-    
-    console.log(`Student ${name} final frequencies:`, { 
-      totalAbsences, 
-      frequency, 
-      yearlyAbsences, 
-      yearlyFrequency,
-      manualFrequency,
-      lowFrequency
-    });
-    
+
     students.push({
       id: i - headerRow,
       name,
@@ -252,9 +202,7 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       frequency,
       yearlyAbsences,
       yearlyFrequency,
-      lowFrequency,
-      manualFrequency,
-      totalClasses: totalClassesPerPeriod
+      lowFrequency
     });
   }
   
