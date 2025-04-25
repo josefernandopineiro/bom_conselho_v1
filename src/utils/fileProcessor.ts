@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -44,7 +45,10 @@ export const processMapaoFile = (file: File): Promise<{
         
         // Update class data counts
         classData.totalStudents = students.length;
-        classData.belowAverageCount = students.filter(s => s.averageGrade < 5).length;
+        classData.belowAverageCount = students.filter(s => {
+          // Check if any subject has grade < 5
+          return Object.values(s.subjects).some(subject => subject.grade < 5);
+        }).length;
         
         resolve({ students, classData });
       } catch (error) {
@@ -204,6 +208,7 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
   
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
   
+  // Find special columns with exact header matching
   for (let i = 0; i < header.length; i++) {
     const cellValue = String(header[i] || '').trim();
     if (cellValue === 'TOTAL') totalCol = i;
@@ -225,9 +230,7 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
     if (status.toLowerCase() !== 'ativo') continue;
 
     const studentSubjects: Record<string, any> = {};
-    let totalGrade = 0;
-    let subjectCount = 0;
-
+    
     subjects.forEach(subject => {
       const subjectStartCol = subjectColumns[subject];
       if (subjectStartCol !== undefined) {
@@ -239,13 +242,13 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
         };
         
         studentSubjects[subject] = subjectData;
-        totalGrade += subjectData.grade;
-        subjectCount++;
       }
     });
 
     // Get total absences and frequencies
     const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : 0;
+    
+    // Improved percentage extraction using a specialized function
     const frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
     const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : 0;
     const yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
@@ -292,7 +295,7 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       id: i - headerRow,
       name,
       status,
-      averageGrade: subjectCount > 0 ? totalGrade / subjectCount : 0,
+      averageGrade: 0, // We no longer need this for individual evaluation
       behavioralCodes: [],
       subjects: studentSubjects,
       totalAbsences,

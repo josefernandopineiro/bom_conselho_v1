@@ -7,40 +7,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
+import { useStudents } from '@/context/StudentsContext';
 
-// Mock student data
-const mockStudents = [
-  { id: 1, name: 'Ana Beatriz Lima da Silva', status: 'Ativo', averageGrade: 7.5, behavioralCode: '1', subjects: { 'Matemática': 8, 'Português': 7, 'História': 8, 'Geografia': 7, 'Ciências': 7 } },
-  { id: 2, name: 'Amanda Ramos Oliveira Silva', status: 'Ativo', averageGrade: 6.2, behavioralCode: '3', subjects: { 'Matemática': 6, 'Português': 5, 'História': 7, 'Geografia': 7, 'Ciências': 6 } },
-  { id: 3, name: 'Beatriz de Carvalho Belizardo', status: 'Ativo', averageGrade: 7.8, behavioralCode: '1', subjects: { 'Matemática': 8, 'Português': 8, 'História': 7, 'Geografia': 8, 'Ciências': 8 } },
-  { id: 4, name: 'Danilo Martins Ferreira', status: 'Ativo', averageGrade: 5.4, behavioralCode: '4', subjects: { 'Matemática': 6, 'Português': 5, 'História': 4, 'Geografia': 6, 'Ciências': 6 } },
-  { id: 5, name: 'Daniela Borges Bispo dos Santos', status: 'Ativo', averageGrade: 9.2, behavioralCode: '1', subjects: { 'Matemática': 9, 'Português': 9, 'História': 10, 'Geografia': 9, 'Ciências': 9 } },
-];
-
-// Class metadata
-const classData = {
-  name: '2ª Série A INT - ADMINISTRAÇÃO',
-  year: '2025',
-  period: 'Primeiro Bimestre',
-  totalStudents: 30,
-  belowAverageCount: 12,
-  subjects: ['Matemática', 'Português', 'História', 'Geografia', 'Ciências'],
-};
-
-// Behavioral classification descriptions
-const behavioralCodes = {
-  '1': 'Atitude Positiva',
-  '2': 'Precisa de Atenção',
-  '3': 'Dificuldade de Aprendizagem',
-  '4': 'Problemas de Comportamento',
-  '5': 'Encaminhamento Necessário',
+const formatFrequency = (frequency: number | undefined) => {
+  if (frequency === undefined || isNaN(frequency)) {
+    return '0%';
+  }
+  
+  const roundedFreq = Math.round(frequency);
+  return `${roundedFreq}%`;
 };
 
 const ReportsPage = () => {
   const { toast } = useToast();
+  const { students, classData, behavioralCodes } = useStudents();
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [minutesNotes, setMinutesNotes] = useState('');
   const [improvementPoints, setImprovementPoints] = useState('');
+  
+  // Helper functions for student data analysis
+  const hasSubjectBelowAverage = (student: any) => {
+    return Object.values(student.subjects).some((subject: any) => subject.grade < 5);
+  };
+  
+  const countSubjectsBelowAverage = (student: any) => {
+    return Object.values(student.subjects).filter((subject: any) => subject.grade < 5).length;
+  };
+  
+  const getSubjectsBelowAverage = (student: any) => {
+    return Object.entries(student.subjects)
+      .filter(([_, data]: [string, any]) => data.grade < 5)
+      .map(([subject, _]: [string, any]) => subject);
+  };
   
   const handleGenerateStudentReport = (studentId: number) => {
     setSelectedStudentId(studentId);
@@ -78,6 +76,9 @@ const ReportsPage = () => {
     });
   };
 
+  // Get the currently selected student
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -106,40 +107,47 @@ const ReportsPage = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nome do Aluno</TableHead>
-                          <TableHead>Média</TableHead>
+                          <TableHead>Disciplinas Abaixo da Média</TableHead>
+                          <TableHead>Frequência</TableHead>
                           <TableHead>Classificação</TableHead>
-                          <TableHead>Status</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockStudents.map(student => (
+                        {students.map(student => (
                           <TableRow key={student.id}>
                             <TableCell className="font-medium">{student.name}</TableCell>
-                            <TableCell>{student.averageGrade.toFixed(1)}</TableCell>
                             <TableCell>
-                              {student.behavioralCode ? (
-                                <span className="flex items-center">
-                                  <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
-                                    {student.behavioralCode}
-                                  </span>
-                                  {behavioralCodes[student.behavioralCode as keyof typeof behavioralCodes]}
+                              {hasSubjectBelowAverage(student) ? (
+                                <span className="text-red-600">
+                                  {countSubjectsBelowAverage(student)} {countSubjectsBelowAverage(student) === 1 ? 'disciplina' : 'disciplinas'}
                                 </span>
                               ) : (
-                                <span className="text-gray-400">Não classificado</span>
+                                <span className="text-green-600 flex items-center">
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Todas aprovadas
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
-                              {student.averageGrade >= 7 ? (
-                                <span className="flex items-center text-green-600">
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Aprovado
+                              {student.lowFrequency ? (
+                                <span className="text-amber-600">
+                                  {formatFrequency(student.frequency)} (Baixa)
                                 </span>
                               ) : (
-                                <span className="flex items-center text-red-600">
-                                  <AlertCircle className="h-4 w-4 mr-1" />
-                                  Abaixo da Média
+                                <span>{formatFrequency(student.frequency)}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
+                                <span className="flex items-center">
+                                  <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
+                                    {student.behavioralCodes[0]}
+                                  </span>
+                                  {behavioralCodes.find(c => c.code === student.behavioralCodes[0])?.description || ""}
                                 </span>
+                              ) : (
+                                <span className="text-gray-400">Não classificado</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -174,8 +182,8 @@ const ReportsPage = () => {
                 </CardContent>
                 <CardFooter className="flex justify-between border-t pt-6">
                   <div className="text-sm text-gray-500">
-                    <p>Turma: {classData.name}</p>
-                    <p>Período: {classData.period}</p>
+                    <p>Turma: {classData?.name || "Não identificada"}</p>
+                    <p>Período: {classData?.period || "Não identificado"}</p>
                   </div>
                   <Button 
                     onClick={() => toast({
@@ -189,31 +197,31 @@ const ReportsPage = () => {
                 </CardFooter>
               </Card>
               
-              {selectedStudentId && (
+              {selectedStudent && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-council-primary">Pré-visualização do Relatório</CardTitle>
                     <CardDescription>
-                      {mockStudents.find(s => s.id === selectedStudentId)?.name}
+                      {selectedStudent.name}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="p-6 border rounded-md">
                       <div className="text-center mb-6">
                         <h2 className="text-xl font-bold">RELATÓRIO DE DESEMPENHO DO ALUNO</h2>
-                        <p className="text-gray-600">Conselho de Classe - {classData.period}</p>
+                        <p className="text-gray-600">Conselho de Classe - {classData?.period || "Período não identificado"}</p>
                       </div>
                       
                       <div className="mb-6">
                         <h3 className="font-bold mb-2 border-b pb-1">Identificação</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <p><span className="font-semibold">Aluno(a):</span> {mockStudents.find(s => s.id === selectedStudentId)?.name}</p>
-                            <p><span className="font-semibold">Turma:</span> {classData.name}</p>
+                            <p><span className="font-semibold">Aluno(a):</span> {selectedStudent.name}</p>
+                            <p><span className="font-semibold">Turma:</span> {classData?.name || "Não identificada"}</p>
                           </div>
                           <div>
-                            <p><span className="font-semibold">Ano Letivo:</span> {classData.year}</p>
-                            <p><span className="font-semibold">Período:</span> {classData.period}</p>
+                            <p><span className="font-semibold">Ano Letivo:</span> {classData?.year || new Date().getFullYear().toString()}</p>
+                            <p><span className="font-semibold">Período:</span> {classData?.period || "Não identificado"}</p>
                           </div>
                         </div>
                       </div>
@@ -230,12 +238,12 @@ const ReportsPage = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {Object.entries(mockStudents.find(s => s.id === selectedStudentId)?.subjects || {}).map(([subject, grade]: [string, any]) => (
+                              {Object.entries(selectedStudent.subjects).map(([subject, data]: [string, any]) => (
                                 <tr key={subject}>
                                   <td className="border p-2">{subject}</td>
-                                  <td className="border p-2 text-center">{grade}</td>
+                                  <td className="border p-2 text-center">{data.grade}</td>
                                   <td className="border p-2 text-center">
-                                    {grade >= 7 ? (
+                                    {data.grade >= 5 ? (
                                       <span className="text-green-600">Aprovado</span>
                                     ) : (
                                       <span className="text-red-600">Abaixo da Média</span>
@@ -243,21 +251,37 @@ const ReportsPage = () => {
                                   </td>
                                 </tr>
                               ))}
-                              <tr className="bg-gray-50 font-bold">
-                                <td className="border p-2">Média Geral</td>
-                                <td className="border p-2 text-center">
-                                  {mockStudents.find(s => s.id === selectedStudentId)?.averageGrade.toFixed(1)}
-                                </td>
-                                <td className="border p-2 text-center">
-                                  {(mockStudents.find(s => s.id === selectedStudentId)?.averageGrade || 0) >= 7 ? (
-                                    <span className="text-green-600">Aprovado</span>
-                                  ) : (
-                                    <span className="text-red-600">Abaixo da Média</span>
-                                  )}
-                                </td>
-                              </tr>
                             </tbody>
                           </table>
+                        </div>
+
+                        {hasSubjectBelowAverage(selectedStudent) && (
+                          <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
+                            <h4 className="font-semibold text-red-700 mb-1">Disciplinas que requerem atenção:</h4>
+                            <ul className="list-disc pl-5 text-red-700">
+                              {getSubjectsBelowAverage(selectedStudent).map((subject: string) => (
+                                <li key={subject}>{subject} - Nota: {selectedStudent.subjects[subject].grade}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mb-6">
+                        <h3 className="font-bold mb-2 border-b pb-1">Frequência</h3>
+                        <div className="bg-gray-50 p-3 rounded-md">
+                          <p>
+                            <span className="font-semibold">Frequência atual:</span> {formatFrequency(selectedStudent.frequency)}
+                            {selectedStudent.lowFrequency && (
+                              <span className="ml-2 text-amber-600">(Abaixo do mínimo requerido de 70%)</span>
+                            )}
+                          </p>
+                          <p className="mt-2">
+                            <span className="font-semibold">Total de faltas:</span> {selectedStudent.totalAbsences}
+                          </p>
+                          <p className="mt-2">
+                            <span className="font-semibold">Frequência anual:</span> {formatFrequency(selectedStudent.yearlyFrequency)}
+                          </p>
                         </div>
                       </div>
                       
@@ -266,21 +290,20 @@ const ReportsPage = () => {
                         <div className="bg-gray-50 p-3 rounded-md">
                           <p>
                             <span className="font-semibold">Classificação:</span> {
-                              mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode 
-                              ? `${mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode} - ${
-                                  behavioralCodes[mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode as keyof typeof behavioralCodes]
-                                }`
+                              selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0
+                              ? selectedStudent.behavioralCodes.map(code => {
+                                  const codeObj = behavioralCodes.find(c => c.code === code);
+                                  return `${code} - ${codeObj ? codeObj.description : ''}`;
+                                }).join(', ')
                               : "Não classificado"
                             }
                           </p>
                           <p className="mt-2"><span className="font-semibold">Observações:</span></p>
                           <p className="text-gray-600 mt-1">
-                            {mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode === '1'
-                              ? "O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente das aulas."
-                              : mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode === '3'
-                              ? "O(a) aluno(a) apresenta dificuldades específicas que requerem atenção e suporte adicional."
-                              : mockStudents.find(s => s.id === selectedStudentId)?.behavioralCode === '4'
-                              ? "O(a) aluno(a) apresenta desafios comportamentais que estão impactando seu aprendizado."
+                            {selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0
+                              ? (hasSubjectBelowAverage(selectedStudent) || selectedStudent.lowFrequency)
+                                ? "O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional."
+                                : "O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente das aulas."
                               : "Nenhuma observação registrada."
                             }
                           </p>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, AlertCircle, CheckCircle, Filter, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,9 +41,15 @@ const StudentsPage = () => {
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Calculate subjects below average count
+    const belowAvgSubjectCount = Object.values(student.subjects).filter(
+      subject => (subject as any).grade < 5
+    ).length;
+    
     const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'below-average' && student.averageGrade < 5) ||
-                          (filterStatus === 'above-average' && student.averageGrade >= 5) ||
+                          (filterStatus === 'below-average' && belowAvgSubjectCount > 0) ||
+                          (filterStatus === 'above-average' && belowAvgSubjectCount === 0) ||
                           (filterStatus === 'low-frequency' && student.lowFrequency) ||
                           (filterStatus === 'not-classified' && student.behavioralCodes.length === 0) ||
                           (filterStatus === 'classified' && student.behavioralCodes.length > 0);
@@ -74,12 +81,28 @@ const StudentsPage = () => {
     });
   };
 
-  const getBadgeForGrade = (grade: number) => {
+  const getBadgeForSubject = (grade: number) => {
     if (grade >= 5) {
-      return <Badge className="bg-council-success">Aprovado</Badge>;
+      return <span className="text-green-600 flex items-center justify-end">
+               <CheckCircle className="h-4 w-4 mr-1" />
+               Aprovado
+             </span>;
     } else {
-      return <Badge variant="destructive">Abaixo da Média</Badge>;
+      return <span className="text-red-600 flex items-center justify-end">
+               <AlertCircle className="h-4 w-4 mr-1" />
+               Abaixo da média
+             </span>;
     }
+  };
+
+  // Calculate if student has any subject below average
+  const hasSubjectBelowAverage = (student: any) => {
+    return Object.values(student.subjects).some((subject: any) => subject.grade < 5);
+  };
+
+  // Count subjects below average
+  const countSubjectsBelowAverage = (student: any) => {
+    return Object.values(student.subjects).filter((subject: any) => subject.grade < 5).length;
   };
 
   const safeToFixed = (value: number | null | undefined, digits: number = 1) => {
@@ -115,8 +138,8 @@ const StudentsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os alunos</SelectItem>
-                  <SelectItem value="below-average">Abaixo da média</SelectItem>
-                  <SelectItem value="above-average">Acima da média</SelectItem>
+                  <SelectItem value="below-average">Com disciplinas abaixo da média</SelectItem>
+                  <SelectItem value="above-average">Todas disciplinas aprovadas</SelectItem>
                   <SelectItem value="low-frequency">Baixa frequência</SelectItem>
                   <SelectItem value="not-classified">Não classificados</SelectItem>
                   <SelectItem value="classified">Classificados</SelectItem>
@@ -151,7 +174,13 @@ const StudentsPage = () => {
                               {student.name}
                             </h3>
                             <p className={`text-sm ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
-                              Média: {safeToFixed(student.averageGrade)}
+                              {hasSubjectBelowAverage(student) ? (
+                                <span>
+                                  {countSubjectsBelowAverage(student)} {countSubjectsBelowAverage(student) === 1 ? 'disciplina' : 'disciplinas'} abaixo da média
+                                </span>
+                              ) : (
+                                <span>Todas disciplinas aprovadas</span>
+                              )}
                               {student.lowFrequency && (
                                 <span className="ml-2 inline-flex items-center text-amber-600">
                                   <AlertTriangle className="h-3 w-3 mr-1" />
@@ -161,7 +190,7 @@ const StudentsPage = () => {
                             </p>
                           </div>
                           <div className="flex space-x-1">
-                            {student.averageGrade < 5 && (
+                            {hasSubjectBelowAverage(student) && (
                               <div className={`h-2 w-2 rounded-full ${selectedStudent?.id === student.id ? 'bg-red-300' : 'bg-red-500'}`}></div>
                             )}
                             {student.lowFrequency && (
@@ -213,7 +242,11 @@ const StudentsPage = () => {
                           Baixa Frequência ({formatFrequency(selectedStudent.frequency)})
                         </Badge>
                       )}
-                      {getBadgeForGrade(selectedStudent.averageGrade)}
+                      {hasSubjectBelowAverage(selectedStudent) ? (
+                        <Badge variant="destructive">Disciplinas Abaixo da Média</Badge>
+                      ) : (
+                        <Badge className="bg-council-success">Todas Aprovadas</Badge>
+                      )}
                     </div>
                   </CardTitle>
                 </CardHeader>
@@ -240,33 +273,25 @@ const StudentsPage = () => {
                               <TableCell className="font-medium">{subject}</TableCell>
                               <TableCell className="text-right">{data.grade}</TableCell>
                               <TableCell className="text-right">
-                                {data.grade >= 5 ? (
-                                  <span className="text-green-600 flex items-center justify-end">
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Aprovado
-                                  </span>
-                                ) : (
-                                  <span className="text-red-600 flex items-center justify-end">
-                                    <AlertCircle className="h-4 w-4 mr-1" />
-                                    Abaixo da média
-                                  </span>
-                                )}
+                                {getBadgeForSubject(data.grade)}
                               </TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="bg-gray-50">
-                            <TableCell className="font-bold">Média Geral</TableCell>
-                            <TableCell className="text-right font-bold">{safeToFixed(selectedStudent.averageGrade)}</TableCell>
+                            <TableCell className="font-bold">Situação Geral</TableCell>
+                            <TableCell className="text-right font-bold">
+                              {countSubjectsBelowAverage(selectedStudent)} {countSubjectsBelowAverage(selectedStudent) === 1 ? 'disciplina' : 'disciplinas'} abaixo da média
+                            </TableCell>
                             <TableCell className="text-right">
-                              {selectedStudent.averageGrade >= 5 ? (
+                              {!hasSubjectBelowAverage(selectedStudent) ? (
                                 <span className="text-green-600 flex items-center justify-end">
                                   <CheckCircle className="h-4 w-4 mr-1" />
-                                  Aprovado
+                                  Todas aprovadas
                                 </span>
                               ) : (
                                 <span className="text-red-600 flex items-center justify-end">
                                   <AlertCircle className="h-4 w-4 mr-1" />
-                                  Abaixo da média
+                                  Atenção necessária
                                 </span>
                               )}
                             </TableCell>
