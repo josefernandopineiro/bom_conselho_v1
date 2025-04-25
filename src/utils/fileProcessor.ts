@@ -56,7 +56,7 @@ export const processMapaoFile = (file: File): Promise<{
 };
 
 function estimateTotalClasses(jsonData: any[]): number | undefined {
-  const defaultClasses = 100;
+  const defaultClasses = 111; // Setting default to 111 based on the report
   
   for (let i = 0; i < 20; i++) {
     const row = jsonData[i];
@@ -190,7 +190,7 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
     const frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
     const yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : 0;
     const yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
-
+    
     // Calculate manual frequency if needed
     let manualFrequency = false;
     let calculatedFrequency = frequency;
