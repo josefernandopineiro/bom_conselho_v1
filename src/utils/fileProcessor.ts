@@ -1,5 +1,5 @@
-
 import * as XLSX from 'xlsx';
+import { parse } from 'csv-parse';
 import { Student, ClassData } from '@/types/student';
 
 export const processMapaoFile = (file: File): Promise<{
@@ -9,13 +9,23 @@ export const processMapaoFile = (file: File): Promise<{
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const content = e.target?.result;
+        let jsonData: any[];
+        
+        if (file.name.toLowerCase().endsWith('.csv')) {
+          // Process CSV file
+          const csvContent = content as string;
+          jsonData = await parseCSV(csvContent);
+        } else {
+          // Process Excel file
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        }
         
         console.log('Raw JSON Data:', jsonData);
         
@@ -29,9 +39,6 @@ export const processMapaoFile = (file: File): Promise<{
           subjects: extractSubjects(jsonData),
           totalClassesPerPeriod: estimateTotalClasses(jsonData),
         };
-        
-        console.log('Extracted subjects:', classData.subjects);
-        console.log('Estimated total classes:', classData.totalClassesPerPeriod);
         
         // Process student rows
         const students = processStudentRows(jsonData, classData.subjects, classData.totalClassesPerPeriod);
@@ -51,7 +58,28 @@ export const processMapaoFile = (file: File): Promise<{
       reject(new Error('Erro na leitura do arquivo.'));
     };
     
-    reader.readAsArrayBuffer(file);
+    // Read file appropriately based on type
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  });
+};
+
+const parseCSV = (content: string): Promise<any[]> => {
+  return new Promise((resolve, reject) => {
+    const records: any[] = [];
+    
+    parse(content, {
+      delimiter: ';',
+      trim: true,
+      skip_empty_lines: true,
+      columns: false, // Keep as array format to match XLSX output
+    })
+      .on('data', (row) => records.push(row))
+      .on('end', () => resolve(records))
+      .on('error', (error) => reject(error));
   });
 };
 
@@ -268,25 +296,26 @@ function convertToPercentage(value: any): number {
     return 0;
   }
   
-  // If it contains a percent sign, extract the number
-  if (strValue.includes('%')) {
-    const numericPart = strValue.replace('%', '').trim();
-    return parseFloat(numericPart) || 0;
-  }
+  // Remove percentage sign and any spaces
+  const cleanValue = strValue.replace(/[%\s]/g, '');
   
-  // Try to convert to a number
-  const numValue = parseFloat(strValue.replace(',', '.'));
+  // Replace comma with dot for decimal values
+  const normalizedValue = cleanValue.replace(',', '.');
+  
+  // Convert to number
+  const numValue = parseFloat(normalizedValue);
   
   if (isNaN(numValue)) {
     return 0;
   }
   
   // If the value is a decimal less than 1, multiply by 100
-  if (numValue < 1 && numValue > 0) {
+  if (numValue > 0 && numValue < 1) {
     return numValue * 100;
   }
   
-  return numValue;
+  // Ensure value is between 0 and 100
+  return Math.max(0, Math.min(100, numValue));
 }
 
 function extractClassNameFromHeader(jsonData: any[]): string {
