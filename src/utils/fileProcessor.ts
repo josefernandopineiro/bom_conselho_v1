@@ -139,16 +139,21 @@ function estimateTotalClasses(jsonData: any[]): number | undefined {
 }
 
 function findHeaderRow(jsonData: any[]): number {
+  console.log('\n=== Finding Header Row ===');
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i];
-    if (row && Array.isArray(row) && String(row[0]).toUpperCase() === 'ALUNO') {
-      return i;
+    if (row && Array.isArray(row)) {
+      console.log(`Row ${i}:`, row);
+      if (String(row[0]).toUpperCase() === 'ALUNO') {
+        console.log('Found header row at index:', i);
+        return i;
+      }
     }
   }
   return -1;
 }
 
-function extractSubjects(jsonData: any[]): string[] {
+function extractSubjects(jsonData: any[]): string {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
   
@@ -183,54 +188,6 @@ function extractSubjects(jsonData: any[]): string[] {
   
   return subjects;
 }
-
-const convertToPercentage = (value: any): number => {
-  console.log('\n=== Converting Frequency Value ===');
-  console.log('Original value:', value, 'Type:', typeof value);
-  
-  if (value === null || value === undefined) {
-    console.log('Null/undefined value detected, returning 0');
-    return 0;
-  }
-  
-  // Convert to string and trim whitespace
-  const strValue = String(value).trim();
-  console.log('As string (trimmed):', strValue);
-  
-  if (strValue === '') {
-    console.log('Empty string detected, returning 0');
-    return 0;
-  }
-  
-  // Remove percentage sign and any spaces
-  const cleanValue = strValue.replace(/[%\s]/g, '');
-  console.log('Cleaned value (no % or spaces):', cleanValue);
-  
-  // Replace comma with dot for decimal values
-  const normalizedValue = cleanValue.replace(',', '.');
-  console.log('Normalized value (comma to dot):', normalizedValue);
-  
-  // Convert to number
-  const numValue = parseFloat(normalizedValue);
-  console.log('Parsed as number:', numValue, 'Type:', typeof numValue);
-  
-  if (isNaN(numValue)) {
-    console.log('NaN detected, returning 0');
-    return 0;
-  }
-  
-  // If the value is a decimal less than 1, multiply by 100
-  if (numValue > 0 && numValue < 1) {
-    const percentage = numValue * 100;
-    console.log('Decimal detected, converted to percentage:', percentage);
-    return percentage;
-  }
-  
-  // Ensure value is between 0 and 100
-  const finalValue = Math.max(0, Math.min(100, numValue));
-  console.log('Final percentage value:', finalValue);
-  return finalValue;
-};
 
 function processStudentRows(jsonData: any[], subjects: string[], totalClassesPerPeriod?: number): Student[] {
   const headerRow = findHeaderRow(jsonData);
@@ -461,6 +418,54 @@ function calculateFrequency(absences: number, totalClasses: number): number {
 //   // Ensure value is between 0 and 100
 //   return Math.max(0, Math.min(100, numValue));
 // }
+
+const convertToPercentage = (value: any): number => {
+  console.log('\n=== Converting Frequency Value ===');
+  console.log('Original value:', value, 'Type:', typeof value);
+  
+  if (value === null || value === undefined) {
+    console.log('Null/undefined value detected, returning 0');
+    return 0;
+  }
+  
+  // Convert to string and trim whitespace
+  const strValue = String(value).trim();
+  console.log('As string (trimmed):', strValue);
+  
+  if (strValue === '') {
+    console.log('Empty string detected, returning 0');
+    return 0;
+  }
+  
+  // Remove percentage sign and any spaces
+  const cleanValue = strValue.replace(/[%\s]/g, '');
+  console.log('Cleaned value (no % or spaces):', cleanValue);
+  
+  // Replace comma with dot for decimal values
+  const normalizedValue = cleanValue.replace(',', '.');
+  console.log('Normalized value (comma to dot):', normalizedValue);
+  
+  // Convert to number
+  const numValue = parseFloat(normalizedValue);
+  console.log('Parsed as number:', numValue, 'Type:', typeof numValue);
+  
+  if (isNaN(numValue)) {
+    console.log('NaN detected, returning 0');
+    return 0;
+  }
+  
+  // If the value is a decimal less than 1, multiply by 100
+  if (numValue > 0 && numValue < 1) {
+    const percentage = numValue * 100;
+    console.log('Decimal detected, converted to percentage:', percentage);
+    return percentage;
+  }
+  
+  // Ensure value is between 0 and 100
+  const finalValue = Math.max(0, Math.min(100, numValue));
+  console.log('Final percentage value:', finalValue);
+  return finalValue;
+};
 
 function extractClassNameFromHeader(jsonData: any[]): string {
   for (let i = 0; i < 10; i++) {
