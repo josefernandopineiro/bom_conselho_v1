@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -185,11 +184,62 @@ function extractSubjects(jsonData: any[]): string[] {
   return subjects;
 }
 
+const convertToPercentage = (value: any): number => {
+  console.log('\n=== Converting Frequency Value ===');
+  console.log('Original value:', value, 'Type:', typeof value);
+  
+  if (value === null || value === undefined) {
+    console.log('Null/undefined value detected, returning 0');
+    return 0;
+  }
+  
+  // Convert to string and trim whitespace
+  const strValue = String(value).trim();
+  console.log('As string (trimmed):', strValue);
+  
+  if (strValue === '') {
+    console.log('Empty string detected, returning 0');
+    return 0;
+  }
+  
+  // Remove percentage sign and any spaces
+  const cleanValue = strValue.replace(/[%\s]/g, '');
+  console.log('Cleaned value (no % or spaces):', cleanValue);
+  
+  // Replace comma with dot for decimal values
+  const normalizedValue = cleanValue.replace(',', '.');
+  console.log('Normalized value (comma to dot):', normalizedValue);
+  
+  // Convert to number
+  const numValue = parseFloat(normalizedValue);
+  console.log('Parsed as number:', numValue, 'Type:', typeof numValue);
+  
+  if (isNaN(numValue)) {
+    console.log('NaN detected, returning 0');
+    return 0;
+  }
+  
+  // If the value is a decimal less than 1, multiply by 100
+  if (numValue > 0 && numValue < 1) {
+    const percentage = numValue * 100;
+    console.log('Decimal detected, converted to percentage:', percentage);
+    return percentage;
+  }
+  
+  // Ensure value is between 0 and 100
+  const finalValue = Math.max(0, Math.min(100, numValue));
+  console.log('Final percentage value:', finalValue);
+  return finalValue;
+};
+
 function processStudentRows(jsonData: any[], subjects: string[], totalClassesPerPeriod?: number): Student[] {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
   
+  console.log('\n=== Processing Header Row ===');
   const header = jsonData[headerRow];
+  console.log('Header row:', header);
+  
   const students: Student[] = [];
   
   const subjectColumns: Record<string, number> = {};
@@ -208,23 +258,39 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
   
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
   
-  // Find special columns with exact header matching
+  // Find special columns with exact header matching and debug logging
   for (let i = 0; i < header.length; i++) {
     const cellValue = String(header[i] || '').trim();
+    console.log(`Column ${i}: "${cellValue}"`);
+    
     if (cellValue === 'TOTAL') totalCol = i;
     else if (cellValue === 'TF') tfCol = i;
-    else if (cellValue === 'Fre(%)') freqCol = i;
+    else if (cellValue === 'Fre(%)') {
+      freqCol = i;
+      console.log('Found Fre(%) column at index:', i);
+    }
     else if (cellValue === 'FT An') ftAnCol = i;
-    else if (cellValue === 'Fre An(%)') freqAnCol = i;
+    else if (cellValue === 'Fre An(%)') {
+      freqAnCol = i;
+      console.log('Found Fre An(%) column at index:', i);
+    }
   }
   
-  console.log('Special columns detected:', { totalCol, tfCol, freqCol, ftAnCol, freqAnCol });
-  
+  console.log('Special columns detected:', {
+    totalCol,
+    tfCol,
+    freqCol,
+    ftAnCol,
+    freqAnCol
+  });
+
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
     if (!row || !Array.isArray(row) || !row[0]) continue;
     
     const name = String(row[0]);
+    console.log(`\n=== Processing student: ${name} ===`);
+    
     const status = String(row[1] || '');
     
     if (status.toLowerCase() !== 'ativo') continue;
@@ -249,23 +315,40 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       }
     });
 
-    // Get total absences from the TF column if available, otherwise use our calculated total
+    // Get total absences from the TF column if available, otherwise use calculated total
     const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : totalStudentAbsences;
     
-    // Extract frequency values - try direct extraction first
+    console.log('Raw frequency values:', {
+      'Fre(%)': freqCol > -1 ? row[freqCol] : 'Column not found',
+      'Fre An(%)': freqAnCol > -1 ? row[freqAnCol] : 'Column not found'
+    });
+    
+    // Extract frequency values with detailed logging
     let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
-    let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
     let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
     
-    // Log raw values for debugging
-    console.log(`Student ${name} raw values:`, {
-      rawFrequency: row[freqCol],
-      convertedFrequency: frequency,
-      rawYearlyFreq: row[freqAnCol],
-      convertedYearlyFreq: yearlyFrequency,
-      totalAbsences: totalAbsences,
+    console.log('Processed frequency values:', {
+      frequency,
+      yearlyFrequency,
+      totalAbsences,
       calculatedTotalAbsences: totalStudentAbsences
     });
+    
+    // Extract frequency values - try direct extraction first
+    // let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
+    // let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
+    let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
+    // let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
+    
+    // Log raw values for debugging
+    // console.log(`Student ${name} raw values:`, {
+    //   rawFrequency: row[freqCol],
+    //   convertedFrequency: frequency,
+    //   rawYearlyFreq: row[freqAnCol],
+    //   convertedYearlyFreq: yearlyFrequency,
+    //   totalAbsences: totalAbsences,
+    //   calculatedTotalAbsences: totalStudentAbsences
+    // });
 
     // Flag to indicate if we manually calculated the frequency
     let manualFrequency = false;
@@ -345,39 +428,39 @@ function calculateFrequency(absences: number, totalClasses: number): number {
  * - Text with % (85% becomes 85)
  * - Numbers (85 stays 85)
  */
-function convertToPercentage(value: any): number {
-  if (value === null || value === undefined) {
-    return 0;
-  }
+// function convertToPercentage(value: any): number {
+//   if (value === null || value === undefined) {
+//     return 0;
+//   }
   
-  // Convert to string and trim whitespace
-  const strValue = String(value).trim();
+//   // Convert to string and trim whitespace
+//   const strValue = String(value).trim();
   
-  if (strValue === '') {
-    return 0;
-  }
+//   if (strValue === '') {
+//     return 0;
+//   }
   
-  // Remove percentage sign and any spaces
-  const cleanValue = strValue.replace(/[%\s]/g, '');
+//   // Remove percentage sign and any spaces
+//   const cleanValue = strValue.replace(/[%\s]/g, '');
   
-  // Replace comma with dot for decimal values
-  const normalizedValue = cleanValue.replace(',', '.');
+//   // Replace comma with dot for decimal values
+//   const normalizedValue = cleanValue.replace(',', '.');
   
-  // Convert to number
-  const numValue = parseFloat(normalizedValue);
+//   // Convert to number
+//   const numValue = parseFloat(normalizedValue);
   
-  if (isNaN(numValue)) {
-    return 0;
-  }
+//   if (isNaN(numValue)) {
+//     return 0;
+//   }
   
-  // If the value is a decimal less than 1, multiply by 100
-  if (numValue > 0 && numValue < 1) {
-    return numValue * 100;
-  }
+//   // If the value is a decimal less than 1, multiply by 100
+//   if (numValue > 0 && numValue < 1) {
+//     return numValue * 100;
+//   }
   
-  // Ensure value is between 0 and 100
-  return Math.max(0, Math.min(100, numValue));
-}
+//   // Ensure value is between 0 and 100
+//   return Math.max(0, Math.min(100, numValue));
+// }
 
 function extractClassNameFromHeader(jsonData: any[]): string {
   for (let i = 0; i < 10; i++) {
