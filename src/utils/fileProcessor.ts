@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -35,7 +36,7 @@ export const processMapaoFile = (file: File): Promise<{
           period: extractPeriodFromHeader(jsonData),
           totalStudents: 0,
           belowAverageCount: 0,
-          subjects: extractSubjects(jsonData),
+          subjects: extractSubjects(jsonData), // Fix: extractSubjects now returns string[]
           totalClassesPerPeriod: estimateTotalClasses(jsonData),
         };
         
@@ -153,9 +154,9 @@ function findHeaderRow(jsonData: any[]): number {
   return -1;
 }
 
-function extractSubjects(jsonData: any[]): string {
+function extractSubjects(jsonData: any[]): string[] {
   const headerRow = findHeaderRow(jsonData);
-  if (headerRow === -1) return [];
+  if (headerRow === -1) return []; // Fix: Return empty array instead of undefined[]
   
   const header = jsonData[headerRow];
   const subjects: string[] = [];
@@ -186,7 +187,7 @@ function extractSubjects(jsonData: any[]): string {
     }
   }
   
-  return subjects;
+  return subjects; // Fix: Now correctly returns string[]
 }
 
 function processStudentRows(jsonData: any[], subjects: string[], totalClassesPerPeriod?: number): Student[] {
