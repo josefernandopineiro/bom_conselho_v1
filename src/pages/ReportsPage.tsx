@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FileText, Download, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
+import { generateStudentReport, generateCouncilMinutes } from '@/utils/pdfGenerator';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
@@ -25,7 +25,6 @@ const ReportsPage = () => {
   const [minutesNotes, setMinutesNotes] = useState('');
   const [improvementPoints, setImprovementPoints] = useState('');
   
-  // Helper functions for student data analysis
   const hasSubjectBelowAverage = (student: any) => {
     return Object.values(student.subjects).some((subject: any) => subject.grade < 5);
   };
@@ -41,7 +40,12 @@ const ReportsPage = () => {
   };
   
   const handleGenerateStudentReport = (studentId: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
     setSelectedStudentId(studentId);
+    
+    const doc = generateStudentReport(student, classData);
     
     toast({
       title: "Relatório gerado com sucesso!",
@@ -61,6 +65,9 @@ const ReportsPage = () => {
       return;
     }
     
+    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints);
+    doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
+    
     toast({
       title: "Ata gerada com sucesso!",
       description: "A ata do conselho de classe foi gerada e está pronta para download.",
@@ -69,6 +76,12 @@ const ReportsPage = () => {
   };
   
   const handleDownloadReport = () => {
+    const student = students.find(s => s.id === selectedStudentId);
+    if (!student) return;
+    
+    const doc = generateStudentReport(student, classData);
+    doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
+    
     toast({
       title: "Download iniciado",
       description: "O download do relatório foi iniciado.",
@@ -76,7 +89,6 @@ const ReportsPage = () => {
     });
   };
 
-  // Get the currently selected student
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   return (
@@ -183,7 +195,7 @@ const ReportsPage = () => {
                 <CardFooter className="flex justify-between border-t pt-6">
                   <div className="text-sm text-gray-500">
                     <p>Turma: {classData?.name || "Não identificada"}</p>
-                    <p>Período: {classData?.period || "Não identificado"}</p>
+                    <p>Período: {classData?.period || "Não identificada"}</p>
                   </div>
                   <Button 
                     onClick={() => toast({
@@ -303,7 +315,7 @@ const ReportsPage = () => {
                             {selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0
                               ? (hasSubjectBelowAverage(selectedStudent) || selectedStudent.lowFrequency)
                                 ? "O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional."
-                                : "O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente das aulas."
+                                : "O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente nas aulas."
                               : "Nenhuma observação registrada."
                             }
                           </p>
