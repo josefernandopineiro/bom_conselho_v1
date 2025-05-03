@@ -12,14 +12,14 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
   
   // Add logo
   try {
-    const logoPath = "/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png";
-    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 20, 20);
+    const logoPath = "/lovable-uploads/c8a60a61-7bb3-44b3-b299-fb96f4390bad.png";
+    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
   
   // Set initial position
-  let yPos = MARGIN + 15;
+  let yPos = MARGIN + 20;
   
   // Header
   doc.setFontSize(18);
@@ -196,13 +196,13 @@ export const generateCouncilMinutes = (
   
   // Add logo
   try {
-    const logoPath = "/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png";
-    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 20, 20);
+    const logoPath = "/lovable-uploads/c8a60a61-7bb3-44b3-b299-fb96f4390bad.png";
+    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
   
-  yPos = MARGIN + 15;
+  yPos = MARGIN + 20;
   
   // Header
   doc.setFontSize(18);

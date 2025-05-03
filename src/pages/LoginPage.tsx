@@ -50,11 +50,10 @@ const LoginPage = () => {
       <div className="w-full max-w-md p-4">
         <div className="mb-8 text-center">
           <img 
-            src="/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png" 
+            src="/lovable-uploads/c8a60a61-7bb3-44b3-b299-fb96f4390bad.png" 
             alt="Bom Conselho Logo" 
-            className="mx-auto h-16 w-16 rounded-full bg-white p-2 shadow-md" 
+            className="mx-auto h-32 w-auto" 
           />
-          <h1 className="mt-4 text-2xl font-bold text-council-primary">Bom Conselho</h1>
           <p className="text-gray-600">Sistema de Gestão de Conselho de Classe</p>
         </div>
         

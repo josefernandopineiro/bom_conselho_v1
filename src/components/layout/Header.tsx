@@ -13,9 +13,9 @@ const Header = () => {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <img 
-            src="/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png" 
+            src="/lovable-uploads/ebf40e45-e86c-42e6-ba45-da8fa571f9d4.png" 
             alt="Bom Conselho Logo" 
-            className="h-10 w-10 rounded-full bg-white p-1" 
+            className="h-10 w-10" 
           />
           <h1 className="text-xl font-bold tracking-tight">
             {isMobile ? "Bom Conselho" : "Bom Conselho"}
