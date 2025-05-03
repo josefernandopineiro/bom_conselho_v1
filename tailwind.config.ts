@@ -64,13 +64,17 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				council: {
-					primary: '#1a73e8',
-					secondary: '#4285f4',
-					success: '#34a853',
-					warning: '#fbbc05',
-					danger: '#ea4335',
-					background: '#f8f9fa',
-					light: '#ffffff'
+					// Colors for Bom Conselho
+					primary: '#3498db',     // Primary blue
+					secondary: '#2980b9',   // Secondary darker blue
+					success: '#27ae60',     // Success green
+					warning: '#f39c12',     // Warning orange
+					danger: '#e74c3c',      // Danger red
+					background: '#f8f9fa',  // Light background
+					light: '#ffffff',       // White
+					accent: '#9b59b6',      // Purple accent
+					neutral: '#95a5a6',     // Neutral gray
+					dark: '#2c3e50'         // Dark color
 				}
 			},
 			borderRadius: {

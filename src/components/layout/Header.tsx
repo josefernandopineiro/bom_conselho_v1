@@ -14,11 +14,11 @@ const Header = () => {
         <div className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/725902b3-b389-43ab-bd66-550e7f4373fd.png" 
-            alt="Class Council Compass Logo" 
+            alt="Bom Conselho Logo" 
             className="h-10 w-10 rounded-full bg-white p-1" 
           />
           <h1 className="text-xl font-bold tracking-tight">
-            {isMobile ? "CCC" : "Class Council Compass"}
+            {isMobile ? "Bom Conselho" : "Bom Conselho"}
           </h1>
         </div>
 
