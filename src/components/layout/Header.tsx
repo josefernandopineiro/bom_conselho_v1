@@ -13,7 +13,7 @@ const Header = () => {
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <img 
-            src="/lovable-uploads/ebf40e45-e86c-42e6-ba45-da8fa571f9d4.png" 
+            src="/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png" 
             alt="Bom Conselho Logo" 
             className="h-10 w-10" 
           />

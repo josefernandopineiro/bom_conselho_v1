@@ -12,7 +12,7 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
   
   // Add logo
   try {
-    const logoPath = "/lovable-uploads/c8a60a61-7bb3-44b3-b299-fb96f4390bad.png";
+    const logoPath = "/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png";
     doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
@@ -196,7 +196,7 @@ export const generateCouncilMinutes = (
   
   // Add logo
   try {
-    const logoPath = "/lovable-uploads/c8a60a61-7bb3-44b3-b299-fb96f4390bad.png";
+    const logoPath = "/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png";
     doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
