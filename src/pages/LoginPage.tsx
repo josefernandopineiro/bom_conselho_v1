@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff, Lock, LogIn, User } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -14,6 +15,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +30,8 @@ const LoginPage = () => {
           description: "Bem-vindo ao sistema Bom Conselho",
         });
         
-        // Simular armazenamento de sessão (em produção, use tokens JWT)
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', 'admin');
+        // Usar a função de login do contexto de autenticação
+        login('admin');
         navigate('/');
       } else {
         // Falha no login

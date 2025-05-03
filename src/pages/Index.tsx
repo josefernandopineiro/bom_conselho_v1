@@ -69,7 +69,7 @@ const Index = () => {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-council-primary mb-6">Bem-vindo ao Class Council Compass</h1>
+        <h1 className="text-3xl font-bold text-council-primary mb-6">Bem-vindo ao Bom Conselho</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
