@@ -63,28 +63,64 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
   yPos += 12;
   doc.setFontSize(11);
   
-  // Table headers
-  const colWidths = [80, 30, 60];
-  let xPos = MARGIN;
+  // Improved table layout with dynamic row heights
+  // Define column widths - wider subject column, narrower grade and status columns
+  const colWidths = [CONTENT_WIDTH * 0.6, CONTENT_WIDTH * 0.15, CONTENT_WIDTH * 0.25];
+  const COL_PADDING = 3; // padding inside cells
   
+  // Table headers with background
+  let xPos = MARGIN;
   doc.setFont('helvetica', 'bold');
   doc.setFillColor(240, 240, 240);
   doc.rect(MARGIN, yPos - 6, CONTENT_WIDTH, 8, 'F');
   
-  doc.text('Disciplina', xPos + 3, yPos);
+  doc.text('Disciplina', xPos + COL_PADDING, yPos);
   xPos += colWidths[0];
-  doc.text('Nota', xPos + 3, yPos);
+  doc.text('Nota', xPos + COL_PADDING, yPos);
   xPos += colWidths[1];
-  doc.text('Situação', xPos + 3, yPos);
+  doc.text('Situação', xPos + COL_PADDING, yPos);
   
-  // Table content
+  // Table content with text wrapping and dynamic row heights
   yPos += 10;
   doc.setFont('helvetica', 'normal');
   
   const subjects = Object.entries(student.subjects);
+  
+  // Helper function to wrap text and return lines plus height
+  const wrapText = (text, maxWidth) => {
+    const fontSize = 11; // current font size
+    doc.setFontSize(fontSize);
+    
+    // Split text into words
+    const words = text.split(' ');
+    let lines = [];
+    let currentLine = words[0];
+    
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const width = doc.getStringUnitWidth(currentLine + ' ' + word) * fontSize / doc.internal.scaleFactor;
+      
+      if (width < maxWidth - (2 * COL_PADDING)) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    
+    lines.push(currentLine);
+    
+    // Calculate needed height (line height is approximately 1.2 times font size)
+    const lineHeight = fontSize * 0.5; // in mm
+    const totalHeight = lines.length * lineHeight + (2 * COL_PADDING);
+    
+    return { lines, height: totalHeight };
+  };
+  
   for (let i = 0; i < subjects.length; i++) {
     const [subject, data] = subjects[i];
     
+    // Check if we need a new page
     if (yPos > PAGE_HEIGHT - MARGIN - 30) {
       doc.addPage();
       yPos = MARGIN + 10;
@@ -95,27 +131,40 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
       yPos += 15;
     }
     
+    // Wrap subject text
+    const wrappedSubject = wrapText(subject, colWidths[0]);
+    const rowHeight = Math.max(wrappedSubject.height, 10); // Minimum row height
+    
     // Zebra pattern for rows
     if (i % 2 === 0) {
       doc.setFillColor(245, 245, 245);
-      doc.rect(MARGIN, yPos - 6, CONTENT_WIDTH, 8, 'F');
+      doc.rect(MARGIN, yPos - 6, CONTENT_WIDTH, rowHeight, 'F');
     }
     
+    // Draw subject in the first column with wrapping
     xPos = MARGIN;
-    doc.text(subject, xPos + 3, yPos);
+    let textYPos = yPos;
     
+    wrappedSubject.lines.forEach((line, index) => {
+      doc.text(line, xPos + COL_PADDING, textYPos);
+      textYPos += 5; // Move to next line
+    });
+    
+    // Draw grade in the second column
     xPos += colWidths[0];
-    doc.text(data.grade.toString(), xPos + 3, yPos);
+    doc.text(data.grade.toString(), xPos + COL_PADDING, yPos);
     
+    // Draw status in the third column
     xPos += colWidths[1];
     const status = data.grade >= 5 ? 'Aprovado' : 'Abaixo da Média';
     const color = data.grade >= 5 ? [0, 128, 0] : [220, 53, 69]; // green or red
     
     doc.setTextColor(color[0], color[1], color[2]);
-    doc.text(status, xPos + 3, yPos);
+    doc.text(status, xPos + COL_PADDING, yPos);
     doc.setTextColor(0, 0, 0); // Reset text color
     
-    yPos += 10;
+    // Update yPos for the next row
+    yPos += rowHeight;
   }
   
   // Frequencies
