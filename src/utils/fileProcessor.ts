@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { Student, ClassData } from '@/types/student';
 
@@ -36,12 +35,18 @@ export const processMapaoFile = (file: File): Promise<{
           period: extractPeriodFromHeader(jsonData),
           totalStudents: 0,
           belowAverageCount: 0,
-          subjects: extractSubjects(jsonData), // Fix: extractSubjects now returns string[]
+          subjects: [], // Will be populated with subject names only
           totalClassesPerPeriod: estimateTotalClasses(jsonData),
         };
         
-        // Process student rows
-        const students = processStudentRows(jsonData, classData.subjects, classData.totalClassesPerPeriod);
+        // Extract subjects and their column indices
+        const { subjects, subjectColumns } = extractSubjectsAndColumns(jsonData);
+        
+        // Update classData with subject names only
+        classData.subjects = subjects;
+        
+        // Process student rows with the detailed column mapping
+        const students = processStudentRows(jsonData, subjectColumns, classData.totalClassesPerPeriod);
         
         // Update class data counts
         classData.totalStudents = students.length;
@@ -154,84 +159,125 @@ function findHeaderRow(jsonData: any[]): number {
   return -1;
 }
 
-function extractSubjects(jsonData: any[]): string[] {
+/**
+ * New function that extracts subjects and their column indices
+ * Each subject has associated M (Média), F (Faltas), and AC (Ausências Compensadas) columns
+ */
+function extractSubjectsAndColumns(jsonData: any[]): { 
+  subjects: string[], 
+  subjectColumns: Record<string, { 
+    subject: number, 
+    media: number, 
+    faltas: number, 
+    ausenciasCompensadas: number 
+  }> 
+} {
   const headerRow = findHeaderRow(jsonData);
-  if (headerRow === -1) return []; // Fix: Return empty array instead of undefined[]
+  if (headerRow === -1) return { subjects: [], subjectColumns: {} };
   
   const header = jsonData[headerRow];
   const subjects: string[] = [];
+  const subjectColumns: Record<string, { 
+    subject: number, 
+    media: number, 
+    faltas: number, 
+    ausenciasCompensadas: number 
+  }> = {};
   
-  let col = 2;
+  console.log('\n=== Extracting Subjects and Columns ===');
+  console.log('Header row:', header);
   
-  while (col < header.length) {
-    const cell = String(header[col] || '').trim();
+  // Identify column index for each element in header
+  const columnIndices: Record<string, number[]> = {};
+  for (let i = 0; i < header.length; i++) {
+    const column = String(header[i] || '').trim();
+    if (!column) continue;
     
-    if (cell && 
-        cell !== 'Nº' && 
-        cell !== 'M' && 
-        cell !== 'F' && 
-        cell !== 'AC' && 
-        cell !== 'TOTAL' && 
-        cell !== 'TF' && 
-        cell !== 'Fre(%)' && 
-        cell !== 'FT An' && 
-        cell !== 'Fre An(%)') {
+    if (!columnIndices[column]) {
+      columnIndices[column] = [];
+    }
+    columnIndices[column].push(i);
+    console.log(`Column "${column}" found at index ${i}`);
+  }
+
+  // Look for the pattern of subject name followed by M, F, AC columns
+  for (let i = 0; i < header.length; i++) {
+    const potentialSubject = String(header[i] || '').trim();
+    
+    // Skip empty and standard non-subject columns
+    if (!potentialSubject || 
+        potentialSubject === 'ALUNO' || 
+        potentialSubject === 'Nº' || 
+        potentialSubject === 'M' || 
+        potentialSubject === 'F' || 
+        potentialSubject === 'AC' || 
+        potentialSubject === 'TOTAL' || 
+        potentialSubject === 'TF' || 
+        potentialSubject === 'Fre(%)' || 
+        potentialSubject === 'FT An' || 
+        potentialSubject === 'Fre An(%)') {
+      continue;
+    }
+    
+    // Check if this is followed by M, F, AC pattern
+    if (i + 1 < header.length && String(header[i + 1] || '').trim() === 'M' &&
+        i + 2 < header.length && String(header[i + 2] || '').trim() === 'F' &&
+        i + 3 < header.length && String(header[i + 3] || '').trim() === 'AC') {
       
-      if (!subjects.includes(cell)) {
-        subjects.push(cell);
-      }
+      subjects.push(potentialSubject);
+      subjectColumns[potentialSubject] = {
+        subject: i,     // Column index of the subject name
+        media: i + 1,   // Column index of M (Média)
+        faltas: i + 2,  // Column index of F (Faltas)
+        ausenciasCompensadas: i + 3 // Column index of AC (Ausências Compensadas)
+      };
       
-      col += 4;
-    } else {
-      col++;
+      console.log(`Found subject: "${potentialSubject}" at column ${i} with M:${i+1}, F:${i+2}, AC:${i+3}`);
+      
+      // Skip the M, F, AC columns as we've already processed them
+      i += 3;
     }
   }
   
-  return subjects; // Fix: Now correctly returns string[]
+  console.log(`Extracted ${subjects.length} subjects with column mapping:`, subjectColumns);
+  
+  return { subjects, subjectColumns };
 }
 
-function processStudentRows(jsonData: any[], subjects: string[], totalClassesPerPeriod?: number): Student[] {
+function extractSubjects(jsonData: any[]): string[] {
+  const { subjects } = extractSubjectsAndColumns(jsonData);
+  return subjects;
+}
+
+function processStudentRows(
+  jsonData: any[], 
+  subjectColumns: Record<string, {
+    subject: number,
+    media: number,
+    faltas: number,
+    ausenciasCompensadas: number
+  }>,
+  totalClassesPerPeriod?: number
+): Student[] {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
   
-  console.log('\n=== Processing Header Row ===');
+  console.log('\n=== Processing Student Rows with New Column Mapping ===');
   const header = jsonData[headerRow];
   console.log('Header row:', header);
   
   const students: Student[] = [];
   
-  const subjectColumns: Record<string, number> = {};
-  let col = 2;
-  
-  subjects.forEach(subject => {
-    while (col < header.length) {
-      if (String(header[col]).trim() === subject) {
-        subjectColumns[subject] = col;
-        col += 4;
-        break;
-      }
-      col++;
-    }
-  });
-  
+  // Find special columns with exact header matching
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
-  
-  // Find special columns with exact header matching and debug logging
   for (let i = 0; i < header.length; i++) {
     const cellValue = String(header[i] || '').trim();
-    console.log(`Column ${i}: "${cellValue}"`);
     
     if (cellValue === 'TOTAL') totalCol = i;
     else if (cellValue === 'TF') tfCol = i;
-    else if (cellValue === 'Fre(%)') {
-      freqCol = i;
-      console.log('Found Fre(%) column at index:', i);
-    }
+    else if (cellValue === 'Fre(%)') freqCol = i;
     else if (cellValue === 'FT An') ftAnCol = i;
-    else if (cellValue === 'Fre An(%)') {
-      freqAnCol = i;
-      console.log('Found Fre An(%) column at index:', i);
-    }
+    else if (cellValue === 'Fre An(%)') freqAnCol = i;
   }
   
   console.log('Special columns detected:', {
@@ -256,22 +302,28 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
     const studentSubjects: Record<string, any> = {};
     let totalStudentAbsences = 0;
     
-    subjects.forEach(subject => {
-      const subjectStartCol = subjectColumns[subject];
-      if (subjectStartCol !== undefined) {
-        const absences = Number(row[subjectStartCol + 2] || 0);
-        
-        const subjectData = {
-          number: Number(row[subjectStartCol] || 0),
-          grade: Number(row[subjectStartCol + 1] || 0),
-          absences: absences,
-          compensatedAbsences: Number(row[subjectStartCol + 3] || 0)
-        };
-        
-        totalStudentAbsences += absences;
-        studentSubjects[subject] = subjectData;
-      }
-    });
+    // Process each subject using the detailed column mapping
+    for (const [subject, columns] of Object.entries(subjectColumns)) {
+      const mediaValue = row[columns.media];
+      const faltasValue = row[columns.faltas];
+      const acValue = row[columns.ausenciasCompensadas];
+      
+      console.log(`Subject ${subject} - Media: ${mediaValue}, Faltas: ${faltasValue}, AC: ${acValue}`);
+      
+      const grade = Number(mediaValue || 0);
+      const absences = Number(faltasValue || 0);
+      const compensatedAbsences = Number(acValue || 0);
+      
+      const subjectData = {
+        number: columns.subject,  // Using column index as number
+        grade: grade,
+        absences: absences,
+        compensatedAbsences: compensatedAbsences
+      };
+      
+      totalStudentAbsences += absences;
+      studentSubjects[subject] = subjectData;
+    }
 
     // Get total absences from the TF column if available, otherwise use calculated total
     const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : totalStudentAbsences;
@@ -292,22 +344,8 @@ function processStudentRows(jsonData: any[], subjects: string[], totalClassesPer
       calculatedTotalAbsences: totalStudentAbsences
     });
     
-    // Extract frequency values - try direct extraction first
-    // let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
-    // let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
     let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
-    // let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
     
-    // Log raw values for debugging
-    // console.log(`Student ${name} raw values:`, {
-    //   rawFrequency: row[freqCol],
-    //   convertedFrequency: frequency,
-    //   rawYearlyFreq: row[freqAnCol],
-    //   convertedYearlyFreq: yearlyFrequency,
-    //   totalAbsences: totalAbsences,
-    //   calculatedTotalAbsences: totalStudentAbsences
-    // });
-
     // Flag to indicate if we manually calculated the frequency
     let manualFrequency = false;
     let calculatedFrequency = frequency;
@@ -386,40 +424,6 @@ function calculateFrequency(absences: number, totalClasses: number): number {
  * - Text with % (85% becomes 85)
  * - Numbers (85 stays 85)
  */
-// function convertToPercentage(value: any): number {
-//   if (value === null || value === undefined) {
-//     return 0;
-//   }
-  
-//   // Convert to string and trim whitespace
-//   const strValue = String(value).trim();
-  
-//   if (strValue === '') {
-//     return 0;
-//   }
-  
-//   // Remove percentage sign and any spaces
-//   const cleanValue = strValue.replace(/[%\s]/g, '');
-  
-//   // Replace comma with dot for decimal values
-//   const normalizedValue = cleanValue.replace(',', '.');
-  
-//   // Convert to number
-//   const numValue = parseFloat(normalizedValue);
-  
-//   if (isNaN(numValue)) {
-//     return 0;
-//   }
-  
-//   // If the value is a decimal less than 1, multiply by 100
-//   if (numValue > 0 && numValue < 1) {
-//     return numValue * 100;
-//   }
-  
-//   // Ensure value is between 0 and 100
-//   return Math.max(0, Math.min(100, numValue));
-// }
-
 const convertToPercentage = (value: any): number => {
   console.log('\n=== Converting Frequency Value ===');
   console.log('Original value:', value, 'Type:', typeof value);
