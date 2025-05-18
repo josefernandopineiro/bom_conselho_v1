@@ -67,9 +67,10 @@ export function processStudentRows(
       
       console.log(`Subject ${subject} - Media: ${mediaValue}, Faltas: ${faltasValue}, AC: ${acValue}`);
       
-      const grade = Number(mediaValue || 0);
-      const absences = Number(faltasValue || 0);
-      const compensatedAbsences = Number(acValue || 0);
+      // Ensure numeric values with fallbacks to 0
+      const grade = parseFloat(mediaValue) || 0;
+      const absences = parseInt(faltasValue) || 0;
+      const compensatedAbsences = parseInt(acValue) || 0;
       
       const subjectData = {
         number: columns.subject,  // Using column index as number
