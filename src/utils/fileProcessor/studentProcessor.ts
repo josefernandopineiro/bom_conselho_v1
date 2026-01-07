@@ -18,145 +18,90 @@ export function processStudentRows(
 ): Student[] {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return [];
-  
-  console.log('\n=== Processing Student Rows with New Column Mapping ===');
   const header = jsonData[headerRow];
-  console.log('Header row:', header);
-  
   const students: Student[] = [];
-  
+
   // Find special columns with exact header matching
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
   for (let i = 0; i < header.length; i++) {
     const cellValue = String(header[i] || '').trim();
-    
     if (cellValue === 'TOTAL') totalCol = i;
     else if (cellValue === 'TF') tfCol = i;
     else if (cellValue === 'Fre(%)') freqCol = i;
     else if (cellValue === 'FT An') ftAnCol = i;
     else if (cellValue === 'Fre An(%)') freqAnCol = i;
   }
-  
-  console.log('Special columns detected:', {
-    totalCol,
-    tfCol,
-    freqCol,
-    ftAnCol,
-    freqAnCol
-  });
 
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
     if (!row || !Array.isArray(row) || !row[0]) continue;
-    
-    const name = String(row[0]);
-    console.log(`\n=== Processing student: ${name} ===`);
-    
-    const status = String(row[1] || '');
-    
+
+    const name = String(row[0] || '').trim();
+    const status = String(row[1] || '').trim();
     if (status.toLowerCase() !== 'ativo') continue;
 
     const studentSubjects: Record<string, any> = {};
     let totalStudentAbsences = 0;
-    
-    // Process each subject using the detailed column mapping
+
     for (const [subject, columns] of Object.entries(subjectColumns)) {
       const mediaValue = row[columns.media];
       const faltasValue = row[columns.faltas];
       const acValue = row[columns.ausenciasCompensadas];
-      
-      console.log(`Subject ${subject} - Media: ${mediaValue}, Faltas: ${faltasValue}, AC: ${acValue}`);
-      
-      // Ensure numeric values with fallbacks to 0
-      const grade = parseFloat(mediaValue) || 0;
-      const absences = parseInt(faltasValue) || 0;
-      const compensatedAbsences = parseInt(acValue) || 0;
-      
-      const subjectData = {
-        number: columns.subject,  // Using column index as number
-        grade: grade,
-        absences: absences,
-        compensatedAbsences: compensatedAbsences
-      };
-      
+
+      // Parse grade: support '-' as null, comma decimals
+      const gradeRaw = String(mediaValue || '').trim();
+      const grade = gradeRaw === '-' || gradeRaw === '' ? null : (() => {
+        const n = parseFloat(gradeRaw.replace(',', '.'));
+        return isNaN(n) ? null : n;
+      })();
+
+      const absences = (() => {
+        const n = parseInt(String(faltasValue || '').replace(/[^0-9\-]/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+      })();
+
+      const compensatedAbsences = (() => {
+        const n = parseInt(String(acValue || '').replace(/[^0-9\-]/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+      })();
+
       totalStudentAbsences += absences;
-      studentSubjects[subject] = subjectData;
+      studentSubjects[subject] = { number: columns.subject, grade, absences, compensatedAbsences };
     }
 
-    // Get total absences from the TF column if available, otherwise use calculated total
-    const totalAbsences = tfCol > -1 ? Number(row[tfCol] || 0) : totalStudentAbsences;
-    
-    console.log('Raw frequency values:', {
-      'Fre(%)': freqCol > -1 ? row[freqCol] : 'Column not found',
-      'Fre An(%)': freqAnCol > -1 ? row[freqAnCol] : 'Column not found'
-    });
-    
-    // Extract frequency values with detailed logging
-    let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : 0;
-    let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : 0;
-    
-    console.log('Processed frequency values:', {
-      frequency,
-      yearlyFrequency,
-      totalAbsences,
-      calculatedTotalAbsences: totalStudentAbsences
-    });
-    
-    let yearlyAbsences = ftAnCol > -1 ? Number(row[ftAnCol] || 0) : totalAbsences * 2;
-    
-    // Flag to indicate if we manually calculated the frequency
-    let manualFrequency = false;
-    let calculatedFrequency = frequency;
-    let calculatedYearlyFrequency = yearlyFrequency;
-    
-    // If frequency is 0 or not available, calculate it manually
-    if (frequency === 0 || isNaN(frequency)) {
-      manualFrequency = true;
-      const totalClasses = totalClassesPerPeriod || 111;
-      calculatedFrequency = calculateFrequency(totalAbsences, totalClasses);
-      
-      // Assume yearly classes are double the period classes (typical for semester-based systems)
-      const yearlyClasses = totalClasses * 2;
-      calculatedYearlyFrequency = calculateFrequency(yearlyAbsences, yearlyClasses);
-      
-      console.log(`Student ${name} manual frequency calculation:`, {
-        totalClasses,
-        totalAbsences,
-        calculatedFrequency,
-        yearlyClasses,
-        yearlyAbsences,
-        calculatedYearlyFrequency
-      });
+    const totalAbsences = tfCol > -1 ? (Number(row[tfCol]) || totalStudentAbsences) : totalStudentAbsences;
+    let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : NaN;
+    let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : NaN;
+
+    if ((isNaN(frequency) || frequency === 0) && totalClassesPerPeriod) {
+      frequency = calculateFrequency(totalAbsences, totalClassesPerPeriod);
+    }
+    if ((isNaN(yearlyFrequency) || yearlyFrequency === 0) && totalClassesPerPeriod) {
+      const yearlyAbsences = ftAnCol > -1 ? (Number(row[ftAnCol]) || totalAbsences * 2) : totalAbsences * 2;
+      yearlyFrequency = calculateFrequency(yearlyAbsences, (totalClassesPerPeriod || 111) * 2);
     }
 
-    const lowFrequency = calculatedFrequency < 70 || calculatedYearlyFrequency < 70;
+    if (isNaN(frequency)) frequency = 0;
+    if (isNaN(yearlyFrequency)) yearlyFrequency = 0;
+
+    const lowFrequency = frequency < 70 || yearlyFrequency < 70;
 
     students.push({
       id: i - headerRow,
       name,
       status,
-      averageGrade: 0, // We no longer need this for individual evaluation
+      averageGrade: 0,
       behavioralCodes: [],
       subjects: studentSubjects,
       totalAbsences,
-      frequency: calculatedFrequency,
-      yearlyAbsences,
-      yearlyFrequency: calculatedYearlyFrequency,
+      frequency,
+      yearlyAbsences: ftAnCol > -1 ? (Number(row[ftAnCol]) || totalAbsences * 2) : totalAbsences * 2,
+      yearlyFrequency,
       lowFrequency,
-      manualFrequency,
+      manualFrequency: false,
       totalClasses: totalClassesPerPeriod
     });
-    
-    // Final log to verify the processed student data
-    console.log(`Student ${name} processed frequency data:`, {
-      totalAbsences,
-      frequency: calculatedFrequency,
-      yearlyAbsences,
-      yearlyFrequency: calculatedYearlyFrequency,
-      lowFrequency,
-      manualFrequency
-    });
   }
-  
+
   return students;
 }

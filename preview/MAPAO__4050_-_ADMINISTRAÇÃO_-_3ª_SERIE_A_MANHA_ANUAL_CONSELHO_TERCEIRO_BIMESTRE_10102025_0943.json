@@ -1,0 +1,382 @@
+{
+  "file": "MAPAO__4050_-_ADMINISTRAÇÃO_-_3ª_SERIE_A_MANHA_ANUAL_CONSELHO_TERCEIRO_BIMESTRE_10102025_0943.xlsx",
+  "totalClassesPerPeriod": 162,
+  "subjects": [
+    "GESTÃO DE OPERAÇÕES",
+    "GESTAO FINANCEIRA E CONTABILIDADE",
+    "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS",
+    "MARKETING ESTRATEGICO",
+    "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO"
+  ],
+  "subjectColumns": {
+    "GESTÃO DE OPERAÇÕES": {
+      "subject": 2,
+      "media": 3,
+      "faltas": 4,
+      "ausenciasCompensadas": 4
+    },
+    "GESTAO FINANCEIRA E CONTABILIDADE": {
+      "subject": 5,
+      "media": 6,
+      "faltas": 7,
+      "ausenciasCompensadas": 7
+    },
+    "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+      "subject": 8,
+      "media": 9,
+      "faltas": 10,
+      "ausenciasCompensadas": 10
+    },
+    "MARKETING ESTRATEGICO": {
+      "subject": 11,
+      "media": 12,
+      "faltas": 13,
+      "ausenciasCompensadas": 13
+    },
+    "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+      "subject": 14,
+      "media": 15,
+      "faltas": 16,
+      "ausenciasCompensadas": 16
+    }
+  },
+  "studentsCount": 19,
+  "sampleStudents": [
+    {
+      "id": 2,
+      "name": "ALLIF KAUA DO AMARAL VENDIMIATO",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 0,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 1,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 1,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 5,
+      "name": "DAVI DOS SANTOS FERREIRA",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 0,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 0,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 6,
+      "name": "DAYANY TAYNA BENTO SANTANA",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 4,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 7,
+      "name": "ELYSVAN LIMA DA SILVA",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 8,
+      "name": "FELIPE DA SILVA SANTOS",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 4,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 4,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 9,
+      "name": "GUILHERME DOS SANTOS RIBEIRO",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 0,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 10,
+      "name": "ISABELI VITÓRIA DA SILVA SOUZA",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 10,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 6,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 5,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 5,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    },
+    {
+      "id": 11,
+      "name": "JAMILLY NEPUNUNCENA MARTINS",
+      "status": "Ativo",
+      "subjects": {
+        "GESTÃO DE OPERAÇÕES": {
+          "number": 2,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "GESTAO FINANCEIRA E CONTABILIDADE": {
+          "number": 5,
+          "grade": 4,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INOVACAO E DESENVOLVIMENTO DE NEGOCIOS": {
+          "number": 8,
+          "grade": 2,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MARKETING ESTRATEGICO": {
+          "number": 11,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "PROJETO MULTIDISCIPLINAR EM ADMINISTRAÇÃO": {
+          "number": 14,
+          "grade": 3,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 0,
+      "yearlyFrequency": 100,
+      "lowFrequency": false
+    }
+  ]
+}

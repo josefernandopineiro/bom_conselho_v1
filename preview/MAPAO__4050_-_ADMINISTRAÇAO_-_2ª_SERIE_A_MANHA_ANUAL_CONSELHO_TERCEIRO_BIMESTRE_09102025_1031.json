@@ -1,0 +1,272 @@
+{
+  "file": "MAPAO__4050_-_ADMINISTRAÇAO_-_2ª_SERIE_A_MANHA_ANUAL_CONSELHO_TERCEIRO_BIMESTRE_09102025_1031.xlsx",
+  "totalClassesPerPeriod": 104,
+  "subjects": [
+    "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO",
+    "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS",
+    "MATEMATICA APLICADA À ADMINISTRAÇÃO"
+  ],
+  "subjectColumns": {
+    "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+      "subject": 2,
+      "media": 2,
+      "faltas": 3,
+      "ausenciasCompensadas": 4
+    },
+    "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+      "subject": 5,
+      "media": 5,
+      "faltas": 6,
+      "ausenciasCompensadas": 7
+    },
+    "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+      "subject": 8,
+      "media": 8,
+      "faltas": 9,
+      "ausenciasCompensadas": 10
+    }
+  },
+  "studentsCount": 26,
+  "sampleStudents": [
+    {
+      "id": 1,
+      "name": "ARTHUR HENRIQUE BASTOS DE ALMEIDA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 9,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 8,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 9,
+          "absences": 2,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 2,
+      "frequency": 98,
+      "yearlyAbsences": 34,
+      "yearlyFrequency": 89,
+      "lowFrequency": false
+    },
+    {
+      "id": 2,
+      "name": "BEATRIZ DE LIMA FERREIRA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 6,
+          "absences": 10,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 5,
+          "absences": 10,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 8,
+          "absences": 12,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 32,
+      "frequency": 69,
+      "yearlyAbsences": 65,
+      "yearlyFrequency": 80,
+      "lowFrequency": true
+    },
+    {
+      "id": 5,
+      "name": "CARLOS HENRIQUE DE OLIVEIRA SILVA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 5,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 5,
+          "absences": 0,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 8,
+          "absences": 0,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 0,
+      "frequency": 100,
+      "yearlyAbsences": 14,
+      "yearlyFrequency": 96,
+      "lowFrequency": false
+    },
+    {
+      "id": 6,
+      "name": "CAROLINE VICTORIA RONCAIA DE PAULA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 8,
+          "absences": 2,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 6,
+          "absences": 2,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 8,
+          "absences": 2,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 6,
+      "frequency": 94,
+      "yearlyAbsences": 28,
+      "yearlyFrequency": 91,
+      "lowFrequency": false
+    },
+    {
+      "id": 7,
+      "name": "DANIEL ALEXSANDER DE SANTANA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 5,
+          "absences": 8,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 4,
+          "absences": 10,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 7,
+          "absences": 10,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 28,
+      "frequency": 73,
+      "yearlyAbsences": 74,
+      "yearlyFrequency": 77,
+      "lowFrequency": false
+    },
+    {
+      "id": 8,
+      "name": "DANIEL HENRIQUE VIDO DE SOUZA",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 8,
+          "absences": 9,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 7,
+          "absences": 10,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 7,
+          "absences": 10,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 29,
+      "frequency": 72,
+      "yearlyAbsences": 49,
+      "yearlyFrequency": 85,
+      "lowFrequency": false
+    },
+    {
+      "id": 9,
+      "name": "DIEGO ARKANJO GALVAO LOPES",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 5,
+          "absences": 2,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 5,
+          "absences": 2,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 7,
+          "absences": 2,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 6,
+      "frequency": 94,
+      "yearlyAbsences": 25,
+      "yearlyFrequency": 92,
+      "lowFrequency": false
+    },
+    {
+      "id": 11,
+      "name": "FABIANO RAMOS DOS SANTOS",
+      "status": "Ativo",
+      "subjects": {
+        "CARREIRA E COMPETÊNCIAS PARA O MERCADO DE TRABALHO EM ADMINISTRAÇÃO": {
+          "number": 2,
+          "grade": 7,
+          "absences": 4,
+          "compensatedAbsences": 0
+        },
+        "INTRODUÇÃO À ADMINISTRAÇÃO, LEGISLAÇÃO E PESSOAS": {
+          "number": 5,
+          "grade": 7,
+          "absences": 10,
+          "compensatedAbsences": 0
+        },
+        "MATEMATICA APLICADA À ADMINISTRAÇÃO": {
+          "number": 8,
+          "grade": 7,
+          "absences": 10,
+          "compensatedAbsences": 0
+        }
+      },
+      "totalAbsences": 24,
+      "frequency": 77,
+      "yearlyAbsences": 47,
+      "yearlyFrequency": 85,
+      "lowFrequency": false
+    }
+  ]
+}
