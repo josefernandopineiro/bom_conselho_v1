@@ -8,11 +8,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { processMapaoFile } from '@/utils/fileProcessor';
+import { useStudents } from '@/context/StudentsContext';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setStudents, setClassData } = useStudents();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +47,9 @@ const Index = () => {
       // Processa o arquivo usando o novo utilitário
       const { students, classData } = await processMapaoFile(selectedFile);
       
-      // Armazena os dados processados no localStorage para uso nas outras páginas
-      localStorage.setItem('processedStudents', JSON.stringify(students));
-      localStorage.setItem('processedClassData', JSON.stringify(classData));
+      // Atualiza o contexto de estudantes (StudentsContext). O provider salva no localStorage.
+      setStudents(students);
+      setClassData(classData);
       
       // Mostra notificação de sucesso
       toast({
