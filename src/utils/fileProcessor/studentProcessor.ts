@@ -44,7 +44,32 @@ export function processStudentRows(
     let totalStudentAbsences = 0;
 
     for (const [subject, columns] of Object.entries(subjectColumns)) {
-      const mediaValue = row[columns.media];
+      // Resolve media column robustly: prefer header 'M', else search nearby columns for plausible grade
+      const headerRowArr = header;
+      let mediaIdx = columns.media;
+      const headerAtMedia = String(headerRowArr[mediaIdx] || '').trim().toUpperCase();
+      if (headerAtMedia !== 'M') {
+        // search window -2..+2 for header 'M' first
+        let found = -1;
+        for (let k = mediaIdx - 2; k <= mediaIdx + 2; k++) {
+          if (k >= 0 && k < headerRowArr.length) {
+            if (String(headerRowArr[k] || '').trim().toUpperCase() === 'M') { found = k; break; }
+          }
+        }
+        if (found === -1) {
+          // fallback: look for a numeric-looking value in the row that fits grade range (0-10)
+          for (let k = mediaIdx - 2; k <= mediaIdx + 2; k++) {
+            if (k >= 0 && k < row.length) {
+              const v = String(row[k] || '').replace(',', '.').replace('%','').trim();
+              const n = parseFloat(v);
+              if (!isNaN(n) && n >= 0 && n <= 10) { found = k; break; }
+            }
+          }
+        }
+        if (found !== -1) mediaIdx = found;
+      }
+
+      const mediaValue = row[mediaIdx];
       const faltasValue = row[columns.faltas];
       const acValue = row[columns.ausenciasCompensadas];
 
