@@ -48,96 +48,88 @@ export function extractSubjectsAndColumns(jsonData: any[]): {
   // Identify standard non-subject columns for exclusion
   const standardColumns = ['ALUNO', 'Nº', 'CHAMADA', 'NÚMERO', 'TOTAL', 'SITUAÇÃO', 'STATUS', 'TF', 'Fre(%)', 'FT An', 'Fre An(%)'];
   
-  // First pass: identify all potential subjects and their columns
-  const potentialSubjects: {index: number, name: string}[] = [];
-  
-  for (let i = 0; i < header.length; i++) {
-    const columnName = String(header[i] || '').trim();
-    
-    // Skip empty and standard columns
-    if (!columnName || standardColumns.some(stdCol => 
-      columnName.toUpperCase() === stdCol.toUpperCase())) {
-      continue;
+  // Enhanced detection: support two-row headers where the top row contains subject names
+  const potentialSubjects: { index: number; name: string }[] = [];
+  const topRow = headerRow > 0 ? jsonData[headerRow - 1] : null;
+
+  if (topRow && Array.isArray(topRow)) {
+    // Propagate merged/blank cells in topRow: when a cell has a subject name, assume it applies
+    // to following columns until the next non-empty cell.
+    let currentSubject: string | null = null;
+    for (let i = 0; i < header.length; i++) {
+      const topCell = String(topRow[i] || '').trim();
+      const primaryCell = String(header[i] || '').trim();
+
+      // If top row cell looks like a subject (not empty and not a data column), set currentSubject
+      if (topCell && !/^(M|F|AC|TF|Fre\(\%\)|FT An|Fre An\(\%\))$/i.test(topCell) && !standardColumns.some(sc => topCell.toUpperCase() === sc.toUpperCase())) {
+        currentSubject = topCell;
+      }
+
+      // If currentSubject set and primaryCell indicates subject data (M/F/AC) or primaryCell is empty,
+      // mark this column as belonging to currentSubject
+      if (currentSubject) {
+        // Only push when we encounter the first data column after the subject name (subject start)
+        const already = potentialSubjects.find(p => p.name === currentSubject);
+        if (!already) {
+          potentialSubjects.push({ index: i, name: currentSubject });
+          console.log(`Found subject from top row: "${currentSubject}" at approx column ${i}`);
+        }
+      } else {
+        // fallback: if primaryCell is a non-M/F/AC and not a standard column, consider it a subject
+        if (primaryCell && !/^(M|F|AC)$/i.test(primaryCell) && !standardColumns.some(sc => primaryCell.toUpperCase() === sc.toUpperCase())) {
+          potentialSubjects.push({ index: i, name: primaryCell });
+          console.log(`Found potential subject in primary header: "${primaryCell}" at column ${i}`);
+        }
+      }
     }
-    
-    // Skip if this is a known data column (M, F, AC)
-    if (/^(M|F|AC)$/i.test(columnName)) {
-      continue;
+  } else {
+    // Single-row header fallback (existing behavior)
+    for (let i = 0; i < header.length; i++) {
+      const columnName = String(header[i] || '').trim();
+      if (!columnName || standardColumns.some(stdCol => columnName.toUpperCase() === stdCol.toUpperCase())) continue;
+      if (/^(M|F|AC)$/i.test(columnName)) continue;
+      potentialSubjects.push({ index: i, name: columnName });
+      console.log(`Found potential subject: "${columnName}" at column ${i}`);
     }
-    
-    // This could be a subject
-    potentialSubjects.push({index: i, name: columnName});
-    console.log(`Found potential subject: "${columnName}" at column ${i}`);
   }
-  
-  // Second pass: analyze patterns to map subjects to their M, F, AC columns
+
+  // Second pass: map each detected subject to its M/F/AC columns using the primary header row
   for (let i = 0; i < potentialSubjects.length; i++) {
     const subject = potentialSubjects[i];
     const nextSubject = i < potentialSubjects.length - 1 ? potentialSubjects[i + 1] : null;
-    
-    // Determine the range to search for M, F, AC columns
     const searchEndIdx = nextSubject ? nextSubject.index : header.length;
-    
-    // Initialize with default values (-1 means not found)
+
     let mediaIdx = -1;
     let faltasIdx = -1;
     let acIdx = -1;
-    
-    // Look for explicit M, F, AC pattern after the subject
-    for (let j = subject.index + 1; j < searchEndIdx; j++) {
+
+    for (let j = subject.index; j < searchEndIdx; j++) {
       const colName = String(header[j] || '').trim().toUpperCase();
-      
-      if (colName === 'M' && mediaIdx === -1) {
-        mediaIdx = j;
-      } else if (colName === 'F' && faltasIdx === -1) {
-        faltasIdx = j;
-      } else if (colName === 'AC' && acIdx === -1) {
-        acIdx = j;
-      }
+      if (colName === 'M' && mediaIdx === -1) mediaIdx = j;
+      else if (colName === 'F' && faltasIdx === -1) faltasIdx = j;
+      else if (colName === 'AC' && acIdx === -1) acIdx = j;
     }
-    
-    // If we found the pattern, consider this a valid subject
-    if (mediaIdx !== -1 && faltasIdx !== -1) {
-      // AC is optional, if not found, set it to the next column after F
-      if (acIdx === -1) {
-        acIdx = faltasIdx + 1;
-        // Verify this is actually an AC column (not strictly required)
-        const acColName = String(header[acIdx] || '').trim().toUpperCase();
-        if (acColName !== 'AC' && acColName !== '') {
-          // If next column isn't empty and isn't "AC", use same as F (no AC data)
-          acIdx = faltasIdx;
-        }
-      }
-      
-      subjects.push(subject.name);
-      subjectColumns[subject.name] = {
-        subject: subject.index,
-        media: mediaIdx,
-        faltas: faltasIdx,
-        ausenciasCompensadas: acIdx
-      };
-      
-      console.log(`Confirmed subject: "${subject.name}" with columns - M:${mediaIdx}, F:${faltasIdx}, AC:${acIdx}`);
-    } 
-    // As fallback, if we have at least 3 columns between this subject and next, assume they are M, F, AC
-    else if ((nextSubject && (nextSubject.index - subject.index >= 4)) || 
-             (!nextSubject && header.length - subject.index >= 4)) {
-      
-      // Assume M, F, AC are the next three columns after the subject
-      mediaIdx = subject.index + 1;
-      faltasIdx = subject.index + 2;
-      acIdx = subject.index + 3;
-      
-      subjects.push(subject.name);
-      subjectColumns[subject.name] = {
-        subject: subject.index,
-        media: mediaIdx,
-        faltas: faltasIdx,
-        ausenciasCompensadas: acIdx
-      };
-      
-      console.log(`Inferred subject: "${subject.name}" with columns - M:${mediaIdx}, F:${faltasIdx}, AC:${acIdx}`);
+
+    // If no explicit M/F/AC found, try scanning a small window after the subject index
+    if (mediaIdx === -1 && subject.index + 1 < header.length) mediaIdx = subject.index + 1;
+    if (faltasIdx === -1 && subject.index + 2 < header.length) faltasIdx = subject.index + 2;
+    if (acIdx === -1 && subject.index + 3 < header.length) acIdx = subject.index + 3;
+
+    // Validate and adjust AC if it points to a non-empty label that is not AC
+    const acColName = String(header[acIdx] || '').trim().toUpperCase();
+    if (acColName && acColName !== 'AC') {
+      acIdx = faltasIdx; // fallback to same as faltas
     }
+
+    subjects.push(subject.name);
+    subjectColumns[subject.name] = {
+      subject: subject.index,
+      media: mediaIdx,
+      faltas: faltasIdx,
+      ausenciasCompensadas: acIdx
+    };
+
+    console.log(`Mapped subject: "${subject.name}" -> M:${mediaIdx}, F:${faltasIdx}, AC:${acIdx}`);
   }
   
   // If we didn't find any subjects with the expected pattern, try a more aggressive approach
