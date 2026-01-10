@@ -212,7 +212,32 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
     doc.addPage();
     yPos = MARGIN + 10;
   }
-  
+  // Render behavioral codes and observations similar to preview
+  if (student.behavioralCodes && student.behavioralCodes.length > 0) {
+    const codesText = student.behavioralCodes.join(', ');
+    doc.text(`Classificação: ${codesText}`, MARGIN, yPos);
+    yPos += 8;
+    // Observations: prefer explicit `observations` field, else use same heuristic as preview
+    const obsText = student.observations && String(student.observations).trim()
+      ? String(student.observations).trim()
+      : (student.behavioralCodes && student.behavioralCodes.length > 0
+          ? ((student.lowFrequency || Object.values(student.subjects).some((s:any) => s.grade < 5))
+              ? 'O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional.'
+              : 'O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente nas aulas.')
+          : 'Nenhuma observação registrada.');
+
+    const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
+    doc.text(splitObs, MARGIN, yPos);
+    yPos += splitObs.length * 5 + 6;
+  } else {
+    doc.text('Classificação: Não classificado', MARGIN, yPos);
+    yPos += 8;
+    const obsText = student.observations && String(student.observations).trim() ? String(student.observations).trim() : 'Nenhuma observação registrada.';
+    const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
+    doc.text(splitObs, MARGIN, yPos);
+    yPos += splitObs.length * 5 + 6;
+  }
+
   // Signatures
   yPos = PAGE_HEIGHT - MARGIN - 40;
   
@@ -238,7 +263,9 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
 export const generateCouncilMinutes = (
   classData: ClassData,
   minutesNotes: string,
-  improvementPoints: string
+  improvementPoints: string,
+  bestStudents: string[] = [],
+  attentionStudents: string[] = []
 ) => {
   const doc = new jsPDF();
   let yPos = MARGIN;
@@ -369,6 +396,36 @@ export const generateCouncilMinutes = (
   yPos += 8;
   const percentage = classData.totalStudents ? Math.round((classData.belowAverageCount / classData.totalStudents) * 100) : 0;
   doc.text(`Percentual abaixo da média: ${percentage}%`, MARGIN, yPos);
+  
+  // If provided, render suggested best students (explicit list, no inference)
+  if (bestStudents && bestStudents.length > 0) {
+    yPos += 10;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Melhores Alunos (sugeridos)', MARGIN, yPos);
+    yPos += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    bestStudents.forEach((s, idx) => {
+      doc.text(`${idx + 1}. ${s}`, MARGIN + 5, yPos);
+      yPos += 6;
+    });
+  }
+
+  // Render explicit attention students list (only those passed in)
+  if (attentionStudents && attentionStudents.length > 0) {
+    yPos += 10;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Alunos que Precisam de Atenção', MARGIN, yPos);
+    yPos += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    attentionStudents.forEach(s => {
+      doc.text(`- ${s}`, MARGIN + 5, yPos);
+      yPos += 6;
+    });
+  }
   
   // Signature spaces
   yPos = PAGE_HEIGHT - MARGIN - 40;

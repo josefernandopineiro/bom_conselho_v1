@@ -5,6 +5,7 @@ export interface Student {
   status: string;
   averageGrade: number;
   behavioralCodes: string[];
+  observations?: string; // optional freeform observations (kept minimal)
   subjects: Record<string, {
     number: number;
     grade: number;

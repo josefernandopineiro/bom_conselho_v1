@@ -21,141 +21,116 @@ export function findHeaderRow(jsonData: any[]): number {
  * Extracts subjects and their column indices with improved pattern recognition
  * Handles various formats of subject headers and their associated M (Média), F (Faltas), and AC (Ausências Compensadas) columns
  */
-export function extractSubjectsAndColumns(jsonData: any[]): { 
-  subjects: string[], 
-  subjectColumns: Record<string, { 
-    subject: number, 
-    media: number, 
-    faltas: number, 
-    ausenciasCompensadas: number 
-  }> 
+export function extractSubjectsAndColumns(jsonData: any[]): {
+  subjects: string[],
+  subjectColumns: Record<string, {
+    subject: number,
+    media: number,
+    faltas: number,
+    ausenciasCompensadas: number
+  }>
 } {
   const headerRow = findHeaderRow(jsonData);
   if (headerRow === -1) return { subjects: [], subjectColumns: {} };
-  
-  const header = jsonData[headerRow];
+
+  const header = jsonData[headerRow] as any[];
   const subjects: string[] = [];
-  const subjectColumns: Record<string, { 
-    subject: number, 
-    media: number, 
-    faltas: number, 
-    ausenciasCompensadas: number 
-  }> = {};
-  
-  console.log('\n=== Extracting Subjects and Columns (Improved) ===');
-  console.log('Header row:', header);
-  
-  // Identify standard non-subject columns for exclusion
-  const standardColumns = ['ALUNO', 'Nº', 'CHAMADA', 'NÚMERO', 'TOTAL', 'SITUAÇÃO', 'STATUS', 'TF', 'Fre(%)', 'FT An', 'Fre An(%)'];
-  
-  // Enhanced detection: support two-row headers where the top row contains subject names
-  const potentialSubjects: { index: number; name: string }[] = [];
-  const topRow = headerRow > 0 ? jsonData[headerRow - 1] : null;
+  const subjectColumns: Record<string, { subject: number; media: number; faltas: number; ausenciasCompensadas: number }> = {};
 
-  if (topRow && Array.isArray(topRow)) {
-    // Propagate merged/blank cells in topRow: when a cell has a subject name, assume it applies
-    // to following columns until the next non-empty cell.
-    let currentSubject: string | null = null;
-    for (let i = 0; i < header.length; i++) {
-      const topCell = String(topRow[i] || '').trim();
-      const primaryCell = String(header[i] || '').trim();
+  const subHeader = Array.isArray(jsonData[headerRow + 1]) ? jsonData[headerRow + 1] as any[] : null;
 
-      // If top row cell looks like a subject (not empty and not a data column), set currentSubject
-      if (topCell && !/^(M|F|AC|TF|Fre\(\%\)|FT An|Fre An\(\%\))$/i.test(topCell) && !standardColumns.some(sc => topCell.toUpperCase() === sc.toUpperCase())) {
-        currentSubject = topCell;
-      }
+  // helper to normalize cells
+  const cellNorm = (v: any) => String(v || '').trim();
 
-      // If currentSubject set and primaryCell indicates subject data (M/F/AC) or primaryCell is empty,
-      // mark this column as belonging to currentSubject
-      if (currentSubject) {
-        // Only push when we encounter the first data column after the subject name (subject start)
-        const already = potentialSubjects.find(p => p.name === currentSubject);
-        if (!already) {
-          potentialSubjects.push({ index: i, name: currentSubject });
-          console.log(`Found subject from top row: "${currentSubject}" at approx column ${i}`);
+  // collect indices where the subHeader (preferred) or header (fallback) is exactly 'M'
+  const mIndices: number[] = [];
+  if (subHeader) {
+    for (let j = 0; j < subHeader.length; j++) {
+      if (cellNorm(subHeader[j]).toUpperCase() === 'M') mIndices.push(j);
+    }
+  }
+  // fallback: if no subHeader M's, look for header cells equal to 'M'
+  if (mIndices.length === 0) {
+    for (let j = 0; j < header.length; j++) {
+      if (cellNorm(header[j]).toUpperCase() === 'M') mIndices.push(j);
+    }
+  }
+
+  // If we found explicit M columns, map each to a subject by looking left for the subject name
+  if (mIndices.length > 0) {
+    for (const mIdx of mIndices) {
+      // find subject name: look at header at same column, or scan left for first non-empty header cell
+      let subjName = cellNorm(header[mIdx]);
+      if (!subjName) {
+        for (let k = mIdx - 1; k >= 0; k--) {
+          const h = cellNorm(header[k]);
+          if (h) { subjName = h.split(/\r?\n/)[0]; break; }
         }
       } else {
-        // fallback: if primaryCell is a non-M/F/AC and not a standard column, consider it a subject
-        if (primaryCell && !/^(M|F|AC)$/i.test(primaryCell) && !standardColumns.some(sc => primaryCell.toUpperCase() === sc.toUpperCase())) {
-          potentialSubjects.push({ index: i, name: primaryCell });
-          console.log(`Found potential subject in primary header: "${primaryCell}" at column ${i}`);
+        subjName = subjName.split(/\r?\n/)[0];
+      }
+
+      if (!subjName) {
+        // As a last resort, skip unnamed M columns (cannot produce a valid discipline name)
+        continue;
+      }
+
+      const normalized = subjName.toUpperCase();
+      if (normalized === 'M' || normalized === 'F' || normalized === 'AC') continue;
+
+      // determine subject start index: leftmost column where header equals subjName, or mIdx-1
+      let subjectIndex = -1;
+      for (let k = 0; k <= mIdx; k++) {
+        if (cellNorm(header[k]).split(/\r?\n/)[0] === subjName) { subjectIndex = k; break; }
+      }
+      if (subjectIndex === -1) subjectIndex = Math.max(0, mIdx - 1);
+
+      // find F and AC within a small window to the right of M
+      let faltasIdx = -1;
+      let acIdx = -1;
+      for (let k = mIdx + 1; k <= Math.min(mIdx + 4, header.length - 1); k++) {
+        const sSub = subHeader ? cellNorm(subHeader[k]).toUpperCase() : '';
+        const sHead = cellNorm(header[k]).toUpperCase();
+        if (sSub === 'F' || sHead === 'F') { faltasIdx = k; }
+        if (sSub === 'AC' || sHead === 'AC') { acIdx = k; }
+        if (faltasIdx !== -1 && acIdx !== -1) break;
+      }
+
+      // If not found, try searching a bit further for header labels
+      if (faltasIdx === -1) {
+        for (let k = mIdx + 1; k <= Math.min(mIdx + 6, header.length - 1); k++) {
+          if (cellNorm(header[k]).toUpperCase() === 'F') { faltasIdx = k; break; }
         }
       }
-    }
-  } else {
-    // Single-row header fallback (existing behavior)
-    for (let i = 0; i < header.length; i++) {
-      const columnName = String(header[i] || '').trim();
-      if (!columnName || standardColumns.some(stdCol => columnName.toUpperCase() === stdCol.toUpperCase())) continue;
-      if (/^(M|F|AC)$/i.test(columnName)) continue;
-      potentialSubjects.push({ index: i, name: columnName });
-      console.log(`Found potential subject: "${columnName}" at column ${i}`);
+      if (acIdx === -1) {
+        for (let k = mIdx + 1; k <= Math.min(mIdx + 6, header.length - 1); k++) {
+          if (cellNorm(header[k]).toUpperCase() === 'AC') { acIdx = k; break; }
+        }
+      }
+
+      // register subject
+      const finalName = subjName;
+      if (!subjects.includes(finalName)) subjects.push(finalName);
+      subjectColumns[finalName] = { subject: subjectIndex, media: mIdx, faltas: faltasIdx, ausenciasCompensadas: acIdx };
     }
   }
 
-  // Second pass: map each detected subject to its M/F/AC columns using the primary header row
-  for (let i = 0; i < potentialSubjects.length; i++) {
-    const subject = potentialSubjects[i];
-    const nextSubject = i < potentialSubjects.length - 1 ? potentialSubjects[i + 1] : null;
-    const searchEndIdx = nextSubject ? nextSubject.index : header.length;
-
-    let mediaIdx = -1;
-    let faltasIdx = -1;
-    let acIdx = -1;
-
-    for (let j = subject.index; j < searchEndIdx; j++) {
-      const colName = String(header[j] || '').trim().toUpperCase();
-      if (colName === 'M' && mediaIdx === -1) mediaIdx = j;
-      else if (colName === 'F' && faltasIdx === -1) faltasIdx = j;
-      else if (colName === 'AC' && acIdx === -1) acIdx = j;
-    }
-
-    // If no explicit M/F/AC found, try scanning a small window after the subject index
-    if (mediaIdx === -1 && subject.index + 1 < header.length) mediaIdx = subject.index + 1;
-    if (faltasIdx === -1 && subject.index + 2 < header.length) faltasIdx = subject.index + 2;
-    if (acIdx === -1 && subject.index + 3 < header.length) acIdx = subject.index + 3;
-
-    // Validate and adjust AC if it points to a non-empty label that is not AC
-    const acColName = String(header[acIdx] || '').trim().toUpperCase();
-    if (acColName && acColName !== 'AC') {
-      acIdx = faltasIdx; // fallback to same as faltas
-    }
-
-    subjects.push(subject.name);
-    subjectColumns[subject.name] = {
-      subject: subject.index,
-      media: mediaIdx,
-      faltas: faltasIdx,
-      ausenciasCompensadas: acIdx
-    };
-
-    console.log(`Mapped subject: "${subject.name}" -> M:${mediaIdx}, F:${faltasIdx}, AC:${acIdx}`);
-  }
-  
-  // If we didn't find any subjects with the expected pattern, try a more aggressive approach
+  // aggressive fallback: group sequential columns into blocks of 3 when nothing explicit found
   if (subjects.length === 0) {
-    console.log('No standard subject patterns found. Trying alternative detection...');
-    
-    // Group columns in sets of 4 (subject + M + F + AC)
-    for (let i = 0; i < potentialSubjects.length; i++) {
-      const subject = potentialSubjects[i];
-      
-      if (subject.index + 3 < header.length) {
-        subjects.push(subject.name);
-        subjectColumns[subject.name] = {
-          subject: subject.index,
-          media: subject.index + 1,
-          faltas: subject.index + 2,
-          ausenciasCompensadas: subject.index + 3
-        };
-        
-        console.log(`Alternative detection - Subject: "${subject.name}" with assumed columns - M:${subject.index + 1}, F:${subject.index + 2}, AC:${subject.index + 3}`);
+    for (let i = 0; i < header.length; i++) {
+      const name = cellNorm(header[i]);
+      if (!name) continue;
+      const upper = name.toUpperCase();
+      if (upper === 'M' || upper === 'F' || upper === 'AC') continue;
+      if (i + 2 < header.length) {
+        const media = i + 1; const faltas = i + 2; const ac = i + 3 < header.length ? i + 3 : -1;
+        subjects.push(name);
+        subjectColumns[name] = { subject: i, media, faltas, ausenciasCompensadas: ac };
+        i += 3;
       }
     }
   }
-  
-  console.log(`Extracted ${subjects.length} subjects with column mapping:`, subjectColumns);
-  
+
   return { subjects, subjectColumns };
 }
 

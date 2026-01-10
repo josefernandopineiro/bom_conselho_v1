@@ -21,15 +21,17 @@ export function processStudentRows(
   const header = jsonData[headerRow];
   const students: Student[] = [];
 
-  // Find special columns with exact header matching
+  // Find special columns; be tolerant to slight label variations and avoid confusing 'F' (faltas) with 'Fre(%)'
   let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
+  const normalize = (s: any) => String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9%]/g, '');
   for (let i = 0; i < header.length; i++) {
-    const cellValue = String(header[i] || '').trim();
-    if (cellValue === 'TOTAL') totalCol = i;
-    else if (cellValue === 'TF') tfCol = i;
-    else if (cellValue === 'Fre(%)') freqCol = i;
-    else if (cellValue === 'FT An') ftAnCol = i;
-    else if (cellValue === 'Fre An(%)') freqAnCol = i;
+    const raw = normalize(header[i]);
+    if (raw === 'TOTAL') totalCol = i;
+    else if (raw === 'TF') tfCol = i;
+    else if (raw.includes('FREAN') || raw.includes('FREANUAL')) freqAnCol = i;
+    else if (raw.includes('FRE') && raw.includes('%')) freqCol = i;
+    else if (raw === 'FRE' && freqCol === -1) freqCol = i; // fallback when heading is just 'Fre'
+    else if (raw === 'FTAN') ftAnCol = i;
   }
 
   for (let i = headerRow + 1; i < jsonData.length; i++) {
@@ -44,27 +46,15 @@ export function processStudentRows(
     let totalStudentAbsences = 0;
 
     for (const [subject, columns] of Object.entries(subjectColumns)) {
-      // Resolve media column robustly: prefer header 'M', else search nearby columns for plausible grade
-      const headerRowArr = header;
+      // Use the media column determined by the extractor when available.
+      // Only fallback to nearby numeric heuristics when extractor didn't find an M column.
       let mediaIdx = columns.media;
-      const headerAtMedia = String(headerRowArr[mediaIdx] || '').trim().toUpperCase();
-      if (headerAtMedia !== 'M') {
-        // search window -2..+2 for header 'M' first
+      if (typeof mediaIdx !== 'number' || mediaIdx < 0) {
         let found = -1;
-        for (let k = mediaIdx - 2; k <= mediaIdx + 2; k++) {
-          if (k >= 0 && k < headerRowArr.length) {
-            if (String(headerRowArr[k] || '').trim().toUpperCase() === 'M') { found = k; break; }
-          }
-        }
-        if (found === -1) {
-          // fallback: look for a numeric-looking value in the row that fits grade range (0-10)
-          for (let k = mediaIdx - 2; k <= mediaIdx + 2; k++) {
-            if (k >= 0 && k < row.length) {
-              const v = String(row[k] || '').replace(',', '.').replace('%','').trim();
-              const n = parseFloat(v);
-              if (!isNaN(n) && n >= 0 && n <= 10) { found = k; break; }
-            }
-          }
+        for (let k = Math.max(0, (columns.subject || 0) - 2); k <= Math.min(row.length - 1, (columns.subject || 0) + 6); k++) {
+          const v = String(row[k] || '').replace(',', '.').replace('%','').trim();
+          const n = parseFloat(v);
+          if (!isNaN(n) && n >= 0 && n <= 10) { found = k; break; }
         }
         if (found !== -1) mediaIdx = found;
       }

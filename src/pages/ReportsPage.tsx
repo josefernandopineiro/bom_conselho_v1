@@ -24,6 +24,8 @@ const ReportsPage = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [minutesNotes, setMinutesNotes] = useState('');
   const [improvementPoints, setImprovementPoints] = useState('');
+  const [suggestedBest, setSuggestedBest] = useState<string[]>([]);
+  const [selectedBest, setSelectedBest] = useState<string[]>([]);
   
   const hasSubjectBelowAverage = (student: any) => {
     return Object.values(student.subjects).some((subject: any) => subject.grade < 5);
@@ -65,7 +67,7 @@ const ReportsPage = () => {
       return;
     }
     
-    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints);
+    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, selectedBest, getAttentionStudents());
     doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
     
     toast({
@@ -90,6 +92,56 @@ const ReportsPage = () => {
   };
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
+
+  // Utility: compute average grade for a student
+  const computeAverage = (student: any) => {
+    const grades = Object.values(student.subjects).map((s: any) => Number(s.grade)).filter((g: number) => !isNaN(g));
+    if (grades.length === 0) return 0;
+    return grades.reduce((a: number, b: number) => a + b, 0) / grades.length;
+  };
+
+  // Compute suggested best students: average desc, frequency >= 70
+  const computeSuggestedBest = () => {
+    const candidates = students
+      .map(s => ({ name: s.name, avg: computeAverage(s), freq: s.frequency }))
+      .filter(s => s.freq >= 70);
+    candidates.sort((a, b) => b.avg - a.avg);
+    if (candidates.length === 0) return [];
+    // take top 3, but keep ties
+    const top = candidates.slice(0, 3);
+    const minAvg = top.length > 0 ? top[top.length - 1].avg : 0;
+    return candidates.filter(c => c.avg >= minAvg).map(c => c.name);
+  };
+
+  // Compute distribution of behavioral codes
+  const computeBehavioralDistribution = () => {
+    const map: Record<string, number> = {};
+    students.forEach(s => {
+      if (s.behavioralCodes && s.behavioralCodes.length > 0) {
+        s.behavioralCodes.forEach((code: string) => { map[code] = (map[code] || 0) + 1; });
+      }
+    });
+    return map;
+  };
+
+  const getAttentionStudents = () => {
+    // Explicit attention: any student with behavioralCodes OR with low frequency or below average
+    const list: string[] = [];
+    students.forEach(s => {
+      const belowAvg = Object.values(s.subjects).some((sub: any) => sub.grade < 5);
+      if ((s.behavioralCodes && s.behavioralCodes.length > 0) || s.lowFrequency || belowAvg) {
+        list.push(s.name);
+      }
+    });
+    return list;
+  };
+
+  // initialize suggested best when students load
+  React.useEffect(() => {
+    const sug = computeSuggestedBest();
+    setSuggestedBest(sug);
+    setSelectedBest(sug.slice(0, 3));
+  }, [students]);
 
   return (
     <MainLayout>
@@ -429,26 +481,49 @@ const ReportsPage = () => {
                       <div>
                         <h4 className="text-sm font-medium text-gray-500 mb-2">Distribuição das Classificações</h4>
                         <ul className="space-y-2">
-                          <li className="flex justify-between">
-                            <span>1 - Atitude Positiva</span>
-                            <span className="font-medium">3 alunos (60%)</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>3 - Dificuldade de Aprendizagem</span>
-                            <span className="font-medium">1 aluno (20%)</span>
-                          </li>
-                          <li className="flex justify-between">
-                            <span>4 - Problemas de Comportamento</span>
-                            <span className="font-medium">1 aluno (20%)</span>
-                          </li>
+                          {(() => {
+                            const dist = computeBehavioralDistribution();
+                            const entries = Object.entries(dist);
+                            if (entries.length === 0) return <li className="text-sm text-gray-500">Nenhuma classificação registrada.</li>;
+                            return entries.map(([code, count]) => (
+                              <li key={code} className="flex justify-between">
+                                <span>{code} - {behavioralCodes.find(c => c.code === code)?.description || ''}</span>
+                                <span className="font-medium">{count} aluno{count > 1 ? 's' : ''}</span>
+                              </li>
+                            ));
+                          })()}
                         </ul>
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-500 mb-2">Alunos que Precisam de Atenção</h4>
                         <ul className="space-y-1">
-                          <li>Amanda Ramos Oliveira Silva (Dificuldade de Aprendizagem)</li>
-                          <li>Danilo Martins Ferreira (Problemas de Comportamento)</li>
+                          {getAttentionStudents().length === 0 ? (
+                            <li className="text-sm text-gray-500">Nenhum aluno explicitamente indicado.</li>
+                          ) : (
+                            getAttentionStudents().map(name => (
+                              <li key={name}>{name}</li>
+                            ))
+                          )}
                         </ul>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">Sugestão dos 3 Melhores Alunos</h4>
+                      <p className="text-sm text-gray-600 mb-2">Sugestão automática baseada em média geral e frequência &ge; 70%. Confirme antes de gerar a ata.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestedBest.length === 0 && <span className="text-sm text-gray-500">Nenhuma sugestão disponível.</span>}
+                        {suggestedBest.map(name => {
+                          const isSelected = selectedBest.includes(name);
+                          return (
+                            <Button
+                              key={name}
+                              variant={isSelected ? 'default' : 'outline'}
+                              onClick={() => setSelectedBest(prev => prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name])}
+                            >
+                              {name}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
