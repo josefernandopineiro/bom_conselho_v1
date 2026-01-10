@@ -10,6 +10,7 @@ interface StudentsContextType {
   behavioralCodes: BehavioralCode[];
   setBehavioralCodes: React.Dispatch<React.SetStateAction<BehavioralCode[]>>;
   updateStudentBehavioralCodes: (studentId: number, codes: string[]) => void;
+  updateStudentObservations: (studentId: number, observations: string) => void;
 }
 
 const StudentsContext = createContext<StudentsContextType | undefined>(undefined);
@@ -62,6 +63,17 @@ export const StudentsProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
   };
 
+  // Função para atualizar observações livres de um aluno
+  const updateStudentObservations = (studentId: number, observations: string) => {
+    setStudents(prevStudents =>
+      prevStudents.map(student =>
+        student.id === studentId
+          ? { ...student, observations }
+          : student
+      )
+    );
+  };
+
   return (
     <StudentsContext.Provider value={{
       students,
@@ -71,6 +83,8 @@ export const StudentsProvider: React.FC<{ children: ReactNode }> = ({ children }
       behavioralCodes,
       setBehavioralCodes,
       updateStudentBehavioralCodes
+      ,
+      updateStudentObservations
     }}>
       {children}
     </StudentsContext.Provider>

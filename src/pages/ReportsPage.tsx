@@ -364,12 +364,16 @@ const ReportsPage = () => {
                           </p>
                           <p className="mt-2"><span className="font-semibold">Observações:</span></p>
                           <p className="text-gray-600 mt-1">
-                            {selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0
-                              ? (hasSubjectBelowAverage(selectedStudent) || selectedStudent.lowFrequency)
-                                ? "O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional."
-                                : "O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente nas aulas."
-                              : "Nenhuma observação registrada."
-                            }
+                            {(() => {
+                              const obs = selectedStudent.observations && String(selectedStudent.observations).trim();
+                              if (obs) return obs;
+                              if (selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0) {
+                                return (hasSubjectBelowAverage(selectedStudent) || selectedStudent.lowFrequency)
+                                  ? 'O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional.'
+                                  : 'O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente nas aulas.';
+                              }
+                              return 'Nenhuma observação registrada.';
+                            })()}
                           </p>
                         </div>
                       </div>

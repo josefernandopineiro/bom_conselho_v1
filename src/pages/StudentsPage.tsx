@@ -29,7 +29,7 @@ const isLowFrequency = (frequency: number) => {
 
 const StudentsPage = () => {
   const { toast } = useToast();
-  const { students, updateStudentBehavioralCodes, behavioralCodes } = useStudents();
+  const { students, updateStudentBehavioralCodes, updateStudentObservations, behavioralCodes } = useStudents();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -397,6 +397,31 @@ const StudentsPage = () => {
                             ))}
                           </div>
                         </div>
+                        
+                          <div className="bg-gray-50 p-4 rounded-md">
+                            <h3 className="font-medium text-gray-900 mb-2">Observações (visíveis no PDF)</h3>
+                            <p className="text-sm text-gray-600 mb-2">Registre observações livres sobre o aluno; serão incluídas no PDF e salvas localmente.</p>
+                            <textarea
+                              rows={4}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              value={selectedStudent?.observations || ''}
+                              onChange={(e) => setSelectedStudent({ ...selectedStudent, observations: e.target.value })}
+                            />
+                            <div className="mt-2 flex justify-end">
+                              <Button
+                                onClick={() => {
+                                  if (!selectedStudent) return;
+                                  updateStudentObservations(selectedStudent.id, selectedStudent.observations || '');
+                                  // also update local selectedStudent to keep UI in sync
+                                  setSelectedStudent({ ...selectedStudent });
+                                  toast({ title: 'Observações salvas', duration: 2000 });
+                                }}
+                                className="bg-council-primary hover:bg-council-secondary"
+                              >
+                                Salvar Observações
+                              </Button>
+                            </div>
+                          </div>
                       </div>
                     </TabsContent>
                   </Tabs>
