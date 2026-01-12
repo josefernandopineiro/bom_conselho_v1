@@ -57,8 +57,8 @@ export function processStudentRows(
     const { header: h, sub: s } = cellText(i);
     const combined = `${h} ${s}`.toUpperCase();
 
-    // Prefer explicit yearly markers
-    if (freqAnCol === -1 && /\bFRE\b.*\bAN\b|\bFREAN\b|\bFRE\s*AN\b|\bFREQUEN[CÇ]A.*ANUAL\b|\bANUAL\b|FRE\s*AN\(?%?\)?/i.test(combined)) {
+    // Prefer explicit yearly markers - FIXED to detect "Fre An(%)" format
+    if (freqAnCol === -1 && /\bFRE\b.*\bAN\b.*\(%?\)|\bFRE\s*AN\s*\(%\)|\bFREAN\b|\bFREQUEN[CÇ]A.*ANUAL\b/i.test(combined)) {
       freqAnCol = i;
       continue;
     }
