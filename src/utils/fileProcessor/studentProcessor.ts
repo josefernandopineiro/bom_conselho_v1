@@ -21,17 +21,69 @@ export function processStudentRows(
   const header = jsonData[headerRow];
   const students: Student[] = [];
 
-  // Find special columns; be tolerant to slight label variations and avoid confusing 'F' (faltas) with 'Fre(%)'
-  let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1;
-  const normalize = (s: any) => String(s || '').toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9%]/g, '');
+  // Find special columns using header and optional subHeader
+  let totalCol = -1, tfCol = -1, freqCol = -1, ftAnCol = -1, freqAnCol = -1, paeeCol = -1;
+  const labelRows: any[] = [];
+  labelRows.push(header);
+  if (Array.isArray(jsonData[headerRow + 1])) labelRows.push(jsonData[headerRow + 1]);
+  if (Array.isArray(jsonData[headerRow + 2])) labelRows.push(jsonData[headerRow + 2]);
+  if (Array.isArray(jsonData[headerRow + 3])) labelRows.push(jsonData[headerRow + 3]);
+
+  const cellText = (i: number) => {
+    const parts: string[] = [];
+    for (const r of labelRows) {
+      try { parts.push(String(r[i] || '').trim()); } catch (e) { parts.push(''); }
+    }
+    const headerText = parts[0] || '';
+    const sub = parts.slice(1).join(' ');
+    return { header: headerText, sub: sub, combined: `${headerText} ${sub}`.trim() };
+  };
+
+  const isMatch = (text: string, pattern: RegExp) => pattern.test(String(text || ''));
+
+  // First pass: detect TOTAL and TF and FTAN and PAEE
   for (let i = 0; i < header.length; i++) {
-    const raw = normalize(header[i]);
-    if (raw === 'TOTAL') totalCol = i;
-    else if (raw === 'TF') tfCol = i;
-    else if (raw.includes('FREAN') || raw.includes('FREANUAL')) freqAnCol = i;
-    else if (raw.includes('FRE') && raw.includes('%')) freqCol = i;
-    else if (raw === 'FRE' && freqCol === -1) freqCol = i; // fallback when heading is just 'Fre'
-    else if (raw === 'FTAN') ftAnCol = i;
+    const { header: h, sub: s, combined } = cellText(i);
+    const up = `${h} ${s}`.toUpperCase();
+    if (/^TOTAL$/i.test(h) || /^TOTAL$/i.test(up)) totalCol = i;
+    if (/^TF$/i.test(h) || /^TF$/i.test(up) || /^TOTAL\s*FALTAS$/i.test(up)) tfCol = i;
+    if (/FTAN|FT\s*AN|FALTAS\s*ANUAL/i.test(h) || /FTAN|FTAN/i.test(up)) ftAnCol = i;
+    if (/PAEE|PAE\b|ALUNO\s*PAEE/i.test(h) || /PAEE/i.test(up)) paeeCol = i;
+  }
+  // Second pass: detect frequency columns explicitly and distinctly
+  // We'll scan headers and subheaders looking for explicit markers.
+  for (let i = 0; i < header.length; i++) {
+    const { header: h, sub: s } = cellText(i);
+    const combined = `${h} ${s}`.toUpperCase();
+
+    // Prefer explicit yearly markers
+    if (freqAnCol === -1 && /\bFRE\b.*\bAN\b|\bFREAN\b|\bFRE\s*AN\b|\bFREQUEN[CÇ]A.*ANUAL\b|\bANUAL\b|FRE\s*AN\(?%?\)?/i.test(combined)) {
+      freqAnCol = i;
+      continue;
+    }
+  }
+
+  for (let i = 0; i < header.length; i++) {
+    const { header: h, sub: s } = cellText(i);
+    const combined = `${h} ${s}`.toUpperCase();
+
+    // Skip if this is the column already identified as yearly
+    if (i === freqAnCol) continue;
+
+    // Exclude per-discipline 'F' or 'FALTAS' columns by checking for exact small labels
+    const looksLikePerDisciplineF = /^F$/.test((s || '').trim()) || /\bFALTAS\b/.test(combined) || /\bAC\b/.test((s || '').trim());
+    if (looksLikePerDisciplineF) continue;
+
+    // Period frequency markers: 'FRE', 'FRE(%)', 'FRE %', but avoid ones already marked as annual
+    if (freqCol === -1 && (/\bFRE\b/.test(combined) || /FRE\s*\(|FRE.*%/.test(combined)) && !/\bAN\b|ANUAL|FRE.*AN/.test(combined)) {
+      freqCol = i;
+      continue;
+    }
+  }
+
+  // Final safety: if both detected as same index, unset yearly to avoid duplication
+  if (freqCol !== -1 && freqAnCol === freqCol) {
+    freqAnCol = -1;
   }
 
   for (let i = headerRow + 1; i < jsonData.length; i++) {
@@ -87,6 +139,7 @@ export function processStudentRows(
     const totalAbsences = tfCol > -1 ? (Number(row[tfCol]) || totalStudentAbsences) : totalStudentAbsences;
     let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : NaN;
     let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : NaN;
+    const paeeFlag = paeeCol > -1 ? Boolean(String(row[paeeCol] || '').trim()) : false;
 
     if ((isNaN(frequency) || frequency === 0) && totalClassesPerPeriod) {
       frequency = calculateFrequency(totalAbsences, totalClassesPerPeriod);
@@ -113,6 +166,7 @@ export function processStudentRows(
       yearlyAbsences: ftAnCol > -1 ? (Number(row[ftAnCol]) || totalAbsences * 2) : totalAbsences * 2,
       yearlyFrequency,
       lowFrequency,
+      paee: paeeFlag,
       manualFrequency: false,
       totalClasses: totalClassesPerPeriod
     });
