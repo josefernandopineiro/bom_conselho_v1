@@ -1,73 +1,92 @@
-# Welcome to your Lovable project
+# Sistema de Gestão de Conselho de Classe - Bom Conselho
 
-## Project info
+Este projeto é uma ferramenta para gestão e automação de processos de conselho de classe, permitindo a importação de dados acadêmicos, visualização de desempenho de alunos e geração de relatórios (PDF e DOCX) otimizados para impressão.
 
-**URL**: https://lovable.dev/projects/68beb4c4-9de2-46bc-b232-3ca515c7e47b
+## 🚀 Funcionalidades Principais
 
-## How can I edit this code?
+- **Importação de Dados**: Suporte para importação de planilhas "Mapão" de Excel.
+- **Análise de Alunos**: Visualização detalhada de desempenho e frequência.
+- **Detecção de PAEE**: Identificação automática de alunos do Público-Alvo da Educação Especial.
+- **Relatórios**:
+  - Geração de relatórios individuais de alunos (PDF e DOCX).
+  - Geração de Atas do Conselho de Classe (PDF e DOCX).
+  - Otimização para impressão (redução de páginas e consumo de tinta).
+- **Gestão de Configurações**: Personalização de logo da escola e dados institucionais.
 
-There are several ways of editing your application.
+## 🛠️ Tecnologias Utilizadas
 
-**Use Lovable**
+- **Frontend**: React, Vite, TypeScript
+- **UI Components**: shadcn-ui, Tailwind CSS
+- **Gerenciamento de Estado**: Context API (AuthContext, StudentsContext)
+- **Geração de Documentos**: jspdf, docx
+- **Processamento de Dados**: xlsx, zod
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/68beb4c4-9de2-46bc-b232-3ca515c7e47b) and start prompting.
+## 📋 Pré-requisitos
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js & npm instalados
 
-**Use your preferred IDE**
+## 🔧 Configuração e Instalação
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Clonar o repositório**
+   ```bash
+   git clone <URL_DO_REPOSITORIO>
+   cd class-council-compass
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **Instalar dependências**
+   ```bash
+   npm install
+   ```
 
-Follow these steps:
+3. **Configurar variáveis de ambiente**
+   Duplique o arquivo `.env.example` para `.env` (opcional).
+   ```bash
+   cp .env.example .env
+   ```
+   > O sistema funciona completamente sem variáveis de ambiente, utilizando localStorage para persistência.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+4. **Iniciar servidor de desenvolvimento**
+   ```bash
+   npm run dev
+   ```
+   Acesse: `http://localhost:5173`
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🔑 Acesso (Demonstração)
 
-# Step 3: Install the necessary dependencies.
-npm i
+O sistema possui autenticação simulada para fins de demonstração:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+- **Usuário**: `admin`
+- **Senha**: `admin`
+
+> **Nota:** A sessão expira automaticamente após 24 horas.
+
+## 📖 Guia de Uso Básico
+
+1. **Login**: Acesse com as credenciais acima.
+2. **Importação**: Vá para a aba "Alunos" e importe o arquivo Excel do "Mapão".
+3. **Análise**: Visualize a lista de alunos, filtre por nome ou status (Aprovado, Conselho, Reprovado).
+4. **Relatórios**: Vá para a aba "Relatórios" para gerar documentos individuais ou ata da turma.
+5. **Configurações**: Vá para "Configurações" (ícone de engrenagem) para alterar o logo e nome da escola.
+
+## 📦 Build para Produção
+
+Para gerar a versão otimizada para produção:
+
+```bash
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+Para visualizar a build localmente antes do deploy:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run preview
+```
 
-**Use GitHub Codespaces**
+## ⚠️ Limitações Conhecidas
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- A persistência de dados é feita via `localStorage`, portanto os dados **não são compartilhados** entre dispositivos diferentes.
+- O upload de logo não possui validação estrita de tamanho de arquivo (recomendado < 1MB).
 
-## What technologies are used for this project?
+## 📄 Licença
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/68beb4c4-9de2-46bc-b232-3ca515c7e47b) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Proprietário. Todos os direitos reservados.
