@@ -7,7 +7,7 @@ import { calculateFrequency, convertToPercentage } from './calculationUtils';
  * Process the student data rows from the file
  */
 export function processStudentRows(
-  jsonData: any[], 
+  jsonData: any[],
   subjectColumns: Record<string, {
     subject: number,
     media: number,
@@ -104,7 +104,7 @@ export function processStudentRows(
       if (typeof mediaIdx !== 'number' || mediaIdx < 0) {
         let found = -1;
         for (let k = Math.max(0, (columns.subject || 0) - 2); k <= Math.min(row.length - 1, (columns.subject || 0) + 6); k++) {
-          const v = String(row[k] || '').replace(',', '.').replace('%','').trim();
+          const v = String(row[k] || '').replace(',', '.').replace('%', '').trim();
           const n = parseFloat(v);
           if (!isNaN(n) && n >= 0 && n <= 10) { found = k; break; }
         }
@@ -139,7 +139,15 @@ export function processStudentRows(
     const totalAbsences = tfCol > -1 ? (Number(row[tfCol]) || totalStudentAbsences) : totalStudentAbsences;
     let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : NaN;
     let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : NaN;
-    const paeeFlag = paeeCol > -1 ? Boolean(String(row[paeeCol] || '').trim()) : false;
+    const paeeFlag = paeeCol > -1 ? (() => {
+      const val = String(row[paeeCol] || '').trim().toUpperCase();
+      // Aceita: "SIM", "S", "X", "1", "TRUE", "PAEE", ou qualquer texto não-vazio
+      // Rejeita explicitamente: "NÃO", "NAO", "N", "0", "FALSE", "" (vazio)
+      if (val === '' || val === '0' || val === 'N' || val === 'NÃO' || val === 'NAO' || val === 'FALSE') {
+        return false;
+      }
+      return val.length > 0; // Qualquer outro texto não-vazio = true
+    })() : false;
 
     if ((isNaN(frequency) || frequency === 0) && totalClassesPerPeriod) {
       frequency = calculateFrequency(totalAbsences, totalClassesPerPeriod);
