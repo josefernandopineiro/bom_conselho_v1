@@ -23,14 +23,14 @@ const LoginPage = () => {
     setIsLoading(true);
 
     // Este é um login simulado para fins de demonstração
-        setTimeout(() => {
+    setTimeout(() => {
       if (username === 'admin' && password === 'admin') {
         // Login bem-sucedido
         toast({
           title: "Login bem-sucedido",
           description: "Bem-vindo ao sistema Bom Conselho",
         });
-        
+
         // Usar a função de login do contexto de autenticação
         // pass current saved school name to login so personalization is associated
         const savedSchool = localStorage.getItem('schoolInfo');
@@ -53,14 +53,14 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-md p-4">
         <div className="mb-8 text-center">
-          <img 
+          <img
             src={DEFAULT_LOGO_PATH}
-            alt="Bom Conselho Logo" 
-            className="mx-auto h-32 w-auto" 
+            alt="Bom Conselho Logo"
+            className="mx-auto h-32 w-auto"
           />
           <p className="text-gray-600">Sistema de Gestão de Conselho de Classe</p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Login</CardTitle>
@@ -88,7 +88,7 @@ const LoginPage = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
                   Senha
@@ -118,27 +118,12 @@ const LoginPage = () => {
                   </button>
                 </div>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="rounded border-gray-300 text-council-primary focus:ring-council-primary"
-                  />
-                  <label htmlFor="remember" className="text-sm text-gray-600">
-                    Lembrar-me
-                  </label>
-                </div>
-                <a href="#" className="text-sm text-council-primary hover:underline">
-                  Esqueceu a senha?
-                </a>
-              </div>
+
             </CardContent>
-            
+
             <CardFooter>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-council-primary hover:bg-council-secondary"
                 disabled={isLoading}
               >
@@ -157,7 +142,7 @@ const LoginPage = () => {
             </CardFooter>
           </form>
         </Card>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Para fins de demonstração, use:<br />
