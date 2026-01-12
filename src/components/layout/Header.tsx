@@ -3,17 +3,22 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Settings, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getLogoForSchool, DEFAULT_LOGO_PATH } from '@/lib/logo';
+import { useStudents } from '@/context/StudentsContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Header = () => {
   const isMobile = useIsMobile();
+
+  const { classData } = useStudents();
+  const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-council-primary text-white shadow-md">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <img 
-            src="/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png" 
+            src={logo}
             alt="Bom Conselho Logo" 
             className="h-10 w-10" 
           />

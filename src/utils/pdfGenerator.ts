@@ -1,19 +1,26 @@
 
 import jsPDF from 'jspdf';
 import { Student, ClassData } from '@/types/student';
+import { getLogoForSchool, DEFAULT_LOGO_PATH } from '@/lib/logo';
 
 const PAGE_WIDTH = 210; // A4 width in mm
 const PAGE_HEIGHT = 297; // A4 height in mm
 const MARGIN = 20;
 const CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN);
 
-export const generateStudentReport = (student: Student, classData: ClassData) => {
+export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string,string>) => {
   const doc = new jsPDF();
   
-  // Add logo
+  // Add logo (use saved logo for class if available)
   try {
-    const logoPath = "/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png";
-    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
+    const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
+    // doc.addImage accepts dataURL or URL; detect image type for data URLs
+    if (typeof logo === 'string' && logo.startsWith('data:image/')) {
+      const isPng = logo.startsWith('data:image/png');
+      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 40, 15);
+    } else {
+      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 40, 15);
+    }
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
@@ -214,28 +221,30 @@ export const generateStudentReport = (student: Student, classData: ClassData) =>
   }
   // Render behavioral codes and observations similar to preview
   if (student.behavioralCodes && student.behavioralCodes.length > 0) {
-    const codesText = student.behavioralCodes.join(', ');
-    doc.text(`Classificação: ${codesText}`, MARGIN, yPos);
-    yPos += 8;
-    // Observations: prefer explicit `observations` field, else use same heuristic as preview
+    // List each code with description if available in behavioralCodeMap
+    student.behavioralCodes.forEach((code: string) => {
+      const desc = behavioralCodeMap && behavioralCodeMap[code] ? ` - ${behavioralCodeMap[code]}` : '';
+      doc.text(`${code}${desc}`, MARGIN, yPos);
+      yPos += 6;
+    });
+    yPos += 4;
     const obsText = student.observations && String(student.observations).trim()
       ? String(student.observations).trim()
-      : (student.behavioralCodes && student.behavioralCodes.length > 0
-          ? ((student.lowFrequency || Object.values(student.subjects).some((s:any) => s.grade < 5))
-              ? 'O(a) aluno(a) apresenta desafios específicos que requerem atenção e acompanhamento adicional.'
-              : 'O(a) aluno(a) demonstra comprometimento com os estudos e participa ativamente nas aulas.')
-          : 'Nenhuma observação registrada.');
-
-    const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
-    doc.text(splitObs, MARGIN, yPos);
-    yPos += splitObs.length * 5 + 6;
+      : '';
+    if (obsText) {
+      const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
+      doc.text(splitObs, MARGIN, yPos);
+      yPos += splitObs.length * 5 + 6;
+    }
   } else {
     doc.text('Classificação: Não classificado', MARGIN, yPos);
     yPos += 8;
-    const obsText = student.observations && String(student.observations).trim() ? String(student.observations).trim() : 'Nenhuma observação registrada.';
-    const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
-    doc.text(splitObs, MARGIN, yPos);
-    yPos += splitObs.length * 5 + 6;
+    const obsText = student.observations && String(student.observations).trim() ? String(student.observations).trim() : '';
+    if (obsText) {
+      const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
+      doc.text(splitObs, MARGIN, yPos);
+      yPos += splitObs.length * 5 + 6;
+    }
   }
 
   // Signatures
@@ -270,10 +279,15 @@ export const generateCouncilMinutes = (
   const doc = new jsPDF();
   let yPos = MARGIN;
   
-  // Add logo
+  // Add logo (use saved logo for class if available)
   try {
-    const logoPath = "/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png";
-    doc.addImage(logoPath, 'PNG', MARGIN, MARGIN, 40, 15);
+    const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
+    if (typeof logo === 'string' && logo.startsWith('data:image/')) {
+      const isPng = logo.startsWith('data:image/png');
+      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 40, 15);
+    } else {
+      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 40, 15);
+    }
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
@@ -417,7 +431,7 @@ export const generateCouncilMinutes = (
     yPos += 10;
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('Alunos que Precisam de Atenção', MARGIN, yPos);
+    doc.text('Apoio Pedagógico Necessário', MARGIN, yPos);
     yPos += 8;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');

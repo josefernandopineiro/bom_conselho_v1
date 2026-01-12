@@ -8,6 +8,8 @@ import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 import { generateStudentReport, generateCouncilMinutes } from '@/utils/pdfGenerator';
+import { generateStudentDocx } from '@/utils/docxGenerator';
+import { generateStudentDocx } from '@/utils/docxGenerator';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
@@ -47,7 +49,10 @@ const ReportsPage = () => {
     
     setSelectedStudentId(studentId);
     
-    const doc = generateStudentReport(student, classData);
+    // build map of code -> description for PDF rendering
+    const codeMap: Record<string,string> = {};
+    behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
+    const doc = generateStudentReport(student, classData, codeMap);
     
     toast({
       title: "Relatório gerado com sucesso!",
@@ -80,8 +85,9 @@ const ReportsPage = () => {
   const handleDownloadReport = () => {
     const student = students.find(s => s.id === selectedStudentId);
     if (!student) return;
-    
-    const doc = generateStudentReport(student, classData);
+    const codeMap: Record<string,string> = {};
+    behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
+    const doc = generateStudentReport(student, classData, codeMap);
     doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
     
     toast({
@@ -89,6 +95,81 @@ const ReportsPage = () => {
       description: "O download do relatório foi iniciado.",
       duration: 3000,
     });
+  };
+
+  const handleDownloadDocx = async () => {
+    const student = students.find(s => s.id === selectedStudentId);
+    if (!student) return;
+    try {
+      const blob = await generateStudentDocx(student, classData as any, behavioralCodes.reduce((m:any,c:any)=>{m[c.code]=c.description;return m},{}) );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Download iniciado', description: 'O documento editável está sendo baixado.' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o DOCX.' });
+    }
+  };
+
+  const handleDownloadReportDocx = async () => {
+    const student = students.find(s => s.id === selectedStudentId);
+    if (!student) return;
+    const codeMap: Record<string,string> = {};
+    behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
+    try {
+      const blob = await generateStudentDocx(student, classData, codeMap);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Download DOCX iniciado', description: 'O arquivo .docx está sendo baixado.' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o DOCX.' });
+    }
+  };
+
+  // Generate ZIP with all student PDFs and trigger download
+  const handleGenerateAllReports = async () => {
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const codeMap: Record<string,string> = {};
+      behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
+
+      for (const student of students) {
+        const doc = generateStudentReport(student, classData, codeMap);
+        const blob: Blob = doc.output('blob');
+        const filename = `relatorio_${student.name.replace(/\s+/g,'_')}.pdf`;
+        zip.file(filename, blob);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorios_${classData?.name || 'turma'}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Lote de relatórios gerado', description: 'O arquivo compactado foi gerado e o download deve começar.', duration: 4000 });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o arquivo compactado.' });
+    }
   };
 
   const selectedStudent = students.find(s => s.id === selectedStudentId);
@@ -125,15 +206,27 @@ const ReportsPage = () => {
   };
 
   const getAttentionStudents = () => {
-    // Explicit attention: any student with behavioralCodes OR with low frequency or below average
+    // Return list of strings: "Name — Classification Description".
     const list: string[] = [];
     students.forEach(s => {
       const belowAvg = Object.values(s.subjects).some((sub: any) => sub.grade < 5);
-      if ((s.behavioralCodes && s.behavioralCodes.length > 0) || s.lowFrequency || belowAvg) {
-        list.push(s.name);
+      // prefer detractor behavioral codes (filter out descriptions mentioning 'POSITIV')
+      const detractorCodes = (s.behavioralCodes || []).filter((code: string) => {
+        const desc = behavioralCodes.find(c => c.code === code)?.description || '';
+        return !/POSITIV/i.test(desc);
+      });
+      if (detractorCodes.length > 0) {
+        const code = detractorCodes[0];
+        const desc = behavioralCodes.find(c => c.code === code)?.description || '';
+        list.push(`${s.name} — ${desc}`);
+      } else if (s.lowFrequency) {
+        list.push(`${s.name} — Baixa frequência`);
+      } else if (belowAvg) {
+        list.push(`${s.name} — Disciplinas abaixo da média`);
       }
     });
-    return list;
+    // remove duplicates
+    return Array.from(new Set(list));
   };
 
   // initialize suggested best when students load
@@ -203,16 +296,15 @@ const ReportsPage = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                              {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
-                                <span className="flex items-center">
-                                  <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
-                                    {student.behavioralCodes[0]}
+                                {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
+                                  <span className="flex items-center">
+                                    <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
+                                      {student.behavioralCodes.join(', ')}
+                                    </span>
                                   </span>
-                                  {behavioralCodes.find(c => c.code === student.behavioralCodes[0])?.description || ""}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">Não classificado</span>
-                              )}
+                                ) : (
+                                  <span className="text-gray-400">Não classificado</span>
+                                )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end space-x-2">
@@ -250,10 +342,7 @@ const ReportsPage = () => {
                     <p>Período: {classData?.period || "Não identificada"}</p>
                   </div>
                   <Button 
-                    onClick={() => toast({
-                      title: "Lote de relatórios gerado",
-                      description: "Todos os relatórios foram gerados e estão prontos para download em um arquivo compactado.",
-                    })}
+                    onClick={handleGenerateAllReports}
                     className="bg-council-primary hover:bg-council-secondary"
                   >
                     Gerar Todos os Relatórios
@@ -399,6 +488,13 @@ const ReportsPage = () => {
                       <Download className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadDocx}
+                      className="ml-2"
+                    >
+                      Baixar (editável – Word)
+                    </Button>
                   </CardFooter>
                 </Card>
               )}
@@ -499,7 +595,7 @@ const ReportsPage = () => {
                         </ul>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Alunos que Precisam de Atenção</h4>
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">Apoio Pedagógico Necessário</h4>
                         <ul className="space-y-1">
                           {getAttentionStudents().length === 0 ? (
                             <li className="text-sm text-gray-500">Nenhum aluno explicitamente indicado.</li>

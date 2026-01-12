@@ -22,7 +22,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     // Este é um login simulado para fins de demonstração
-    setTimeout(() => {
+        setTimeout(() => {
       if (username === 'admin' && password === 'admin') {
         // Login bem-sucedido
         toast({
@@ -31,7 +31,10 @@ const LoginPage = () => {
         });
         
         // Usar a função de login do contexto de autenticação
-        login('admin');
+        // pass current saved school name to login so personalization is associated
+        const savedSchool = localStorage.getItem('schoolInfo');
+        const schoolName = savedSchool ? JSON.parse(savedSchool).name : undefined;
+        login('admin', schoolName);
         navigate('/');
       } else {
         // Falha no login
@@ -49,8 +52,10 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-md p-4">
         <div className="mb-8 text-center">
+import { DEFAULT_LOGO_PATH } from '@/lib/logo';
+
           <img 
-            src="/lovable-uploads/b2b0f41c-35cb-4563-ac27-aa9ef6cdf0db.png" 
+            src={DEFAULT_LOGO_PATH}
             alt="Bom Conselho Logo" 
             className="mx-auto h-32 w-auto" 
           />

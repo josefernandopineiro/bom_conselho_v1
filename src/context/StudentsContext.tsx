@@ -11,6 +11,7 @@ interface StudentsContextType {
   setBehavioralCodes: React.Dispatch<React.SetStateAction<BehavioralCode[]>>;
   updateStudentBehavioralCodes: (studentId: number, codes: string[]) => void;
   updateStudentObservations: (studentId: number, observations: string) => void;
+  updateStudentPaee: (studentId: number, paee: boolean) => void;
 }
 
 const StudentsContext = createContext<StudentsContextType | undefined>(undefined);
@@ -74,6 +75,17 @@ export const StudentsProvider: React.FC<{ children: ReactNode }> = ({ children }
     );
   };
 
+  // Função para atualizar flag PAEE
+  const updateStudentPaee = (studentId: number, paee: boolean) => {
+    setStudents(prevStudents =>
+      prevStudents.map(student =>
+        student.id === studentId
+          ? { ...student, paee }
+          : student
+      )
+    );
+  };
+
   return (
     <StudentsContext.Provider value={{
       students,
@@ -84,7 +96,8 @@ export const StudentsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setBehavioralCodes,
       updateStudentBehavioralCodes
       ,
-      updateStudentObservations
+      updateStudentObservations,
+      updateStudentPaee
     }}>
       {children}
     </StudentsContext.Provider>

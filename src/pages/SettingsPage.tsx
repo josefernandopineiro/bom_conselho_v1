@@ -7,17 +7,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { saveLogoForSchool, getLogoForSchool, removeLogoForSchool, DEFAULT_LOGO_PATH } from '@/lib/logo';
 
 const SettingsPage = () => {
   const { toast } = useToast();
 
-  const [schoolInfo, setSchoolInfo] = useState({
-    name: 'Escola Técnica Estadual',
-    director: 'Maria Silva',
-    coordinator: 'José Santos',
-    address: 'Rua da Escola, 123 - São Paulo, SP',
-    phone: '(11) 3333-4444',
-    email: 'contato@escola.edu.br',
+  const [schoolInfo, setSchoolInfo] = useState(() => {
+    const saved = localStorage.getItem('schoolInfo');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: 'Escola Técnica Estadual',
+      director: 'Maria Silva',
+      coordinator: 'José Santos',
+      address: 'Rua da Escola, 123 - São Paulo, SP',
+      phone: '(11) 3333-4444',
+      email: 'contato@escola.edu.br',
+    };
+  });
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(() => {
+    const saved = getLogoForSchool(schoolInfo.name);
+    return saved || null;
   });
 
   const [behavioralCodes, setBehavioralCodes] = useState(() => {
@@ -41,12 +51,50 @@ const SettingsPage = () => {
 
   const handleSaveSchoolInfo = () => {
     localStorage.setItem('schoolInfo', JSON.stringify(schoolInfo));
+    // if user changed school name, ensure logo key continuity handled by normalize helper
+    const savedLogo = getLogoForSchool(schoolInfo.name);
+    if (!savedLogo) {
+      // keep default behavior; nothing to do
+    }
     
     toast({
       title: "Informações salvas",
       description: "As informações da escola foram atualizadas com sucesso.",
       duration: 3000,
     });
+  };
+
+  const handleLogoSelected = (file?: File) => {
+    if (!file) return;
+    const validTypes = ['image/png', 'image/jpeg'];
+    const maxSize = 300 * 1024; // 300KB
+    if (!validTypes.includes(file.type)) {
+      setError('Formato inválido. Use PNG ou JPG.');
+      return;
+    }
+    if (file.size > maxSize) {
+      setError('Arquivo muito grande. Tamanho máximo: 300KB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const result = e.target?.result as string;
+      try {
+        await saveLogoForSchool(schoolInfo.name, result);
+        setLogoPreview(result);
+        toast({ title: 'Logo salvo', description: 'O logo da escola foi salvo com sucesso.' });
+      } catch (err) {
+        setError('Falha ao salvar o logo.');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    removeLogoForSchool(schoolInfo.name);
+    setLogoPreview(null);
+    toast({ title: 'Logo removido', description: 'O logo da escola foi removido.' });
   };
 
   const handleCodeChange = (index: number, field: string, value: string) => {
@@ -132,6 +180,27 @@ const SettingsPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Logo da Escola</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 border rounded-md flex items-center justify-center overflow-hidden">
+                      <img src={logoPreview || DEFAULT_LOGO_PATH} alt="Logo" className="object-contain w-full h-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        id="logoUpload"
+                        type="file"
+                        accept="image/png, image/jpeg"
+                        onChange={(e) => handleLogoSelected(e.target.files ? e.target.files[0] : undefined)}
+                      />
+                      <div className="flex space-x-2">
+                        <Button onClick={() => document.getElementById('logoUpload')?.click()} size="sm">Selecionar</Button>
+                        <Button variant="destructive" size="sm" onClick={handleRemoveLogo}>Remover</Button>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG/JPG — máximo 300KB</p>
+                    </div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">

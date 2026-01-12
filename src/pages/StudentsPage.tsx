@@ -29,7 +29,7 @@ const isLowFrequency = (frequency: number) => {
 
 const StudentsPage = () => {
   const { toast } = useToast();
-  const { students, updateStudentBehavioralCodes, updateStudentObservations, behavioralCodes } = useStudents();
+  const { students, updateStudentBehavioralCodes, updateStudentObservations, updateStudentPaee, behavioralCodes } = useStudents();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -170,8 +170,8 @@ const StudentsPage = () => {
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <h3 className={`font-medium ${selectedStudent?.id === student.id ? 'text-white' : 'text-gray-900'}`}>
-                              {student.name}
+                              <h3 className={`font-medium ${selectedStudent?.id === student.id ? 'text-white' : 'text-gray-900'}`}>
+                              {student.name} {student.paee ? <span className="text-xs font-semibold ml-2">(PAEE)</span> : null}
                             </h3>
                             <p className={`text-sm ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
                               {hasSubjectBelowAverage(student) ? (
@@ -233,8 +233,8 @@ const StudentsPage = () => {
             {selectedStudent ? (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl text-council-primary flex justify-between items-center">
-                    <span>{selectedStudent.name}</span>
+                    <CardTitle className="text-xl text-council-primary flex justify-between items-center">
+                    <span>{selectedStudent.name} {selectedStudent.paee ? <span className="text-sm font-semibold ml-2">(PAEE)</span> : null}</span>
                     <div className="flex items-center gap-2">
                       {selectedStudent.lowFrequency && (
                         <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
@@ -373,6 +373,20 @@ const StudentsPage = () => {
                                 </Button>
                               );
                             })}
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded-md">
+                          <h3 className="font-medium text-gray-900 mb-2">Identificação Especial</h3>
+                          <div className="flex items-center space-x-3">
+                            <label className="flex items-center space-x-2">
+                              <input type="checkbox" checked={!!selectedStudent.paee} onChange={(e) => {
+                                updateStudentPaee(selectedStudent.id, e.target.checked);
+                                setSelectedStudent({...selectedStudent, paee: e.target.checked});
+                                toast({ title: 'Atualizado', description: `Flag PAEE atualizada para ${selectedStudent.name}` });
+                              }} />
+                              <span className="text-sm">Aluno PAEE</span>
+                            </label>
                           </div>
                         </div>
 

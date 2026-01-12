@@ -6,6 +6,7 @@ export interface Student {
   averageGrade: number;
   behavioralCodes: string[];
   observations?: string; // optional freeform observations (kept minimal)
+  paee?: boolean; // Público-Alvo da Educação Especial
   subjects: Record<string, {
     number: number;
     grade: number;
