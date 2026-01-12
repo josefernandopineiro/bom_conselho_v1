@@ -5,12 +5,12 @@ import { getLogoForSchool, DEFAULT_LOGO_PATH } from '@/lib/logo';
 
 const PAGE_WIDTH = 210; // A4 width in mm
 const PAGE_HEIGHT = 297; // A4 height in mm
-const MARGIN = 12; // reduced margin to fit more content
+const MARGIN = 10; // optimized margin for printing
 const CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN);
 
-export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string,string>) => {
+export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string, string>) => {
   const doc = new jsPDF();
-  
+
   // Add logo (use saved logo for class if available)
   try {
     const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
@@ -24,94 +24,94 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
-  
+
   // Set initial position
-  let yPos = MARGIN + 14;
+  let yPos = MARGIN + 10;
 
   // Header
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
 
-  yPos += 8;
-  doc.setFontSize(12);
+  yPos += 6;
+  doc.setFontSize(11);
   doc.text('RELATÓRIO DE DESEMPENHO DO ALUNO', PAGE_WIDTH / 2, yPos, { align: 'center' });
 
-  yPos += 6;
-  doc.setFontSize(10);
+  yPos += 4;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text(`Conselho de Classe - ${classData.period}`, PAGE_WIDTH / 2, yPos, { align: 'center' });
-  
+
   // Student Info
-  yPos += 12;
-  doc.setFontSize(12);
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Identificação', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5); // Underline
 
-  yPos += 8;
-  doc.setFontSize(10);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const baseStudentText = `Aluno(a): ${student.name}`;
   doc.text(baseStudentText, MARGIN, yPos);
   if (student.paee) {
     try {
-      const fontSize = 12;
+      const fontSize = 9;
       const width = doc.getStringUnitWidth(baseStudentText) * fontSize / doc.internal.scaleFactor;
       doc.setTextColor(220, 53, 69);
       doc.text('(PAEE)', MARGIN + width + 2, yPos);
       doc.setTextColor(0, 0, 0);
     } catch (err) {
       // fallback: render on next line
-      yPos += 6;
+      yPos += 5;
       doc.setTextColor(220, 53, 69);
       doc.text('(PAEE)', MARGIN, yPos);
       doc.setTextColor(0, 0, 0);
     }
   }
-  yPos += 8;
+  yPos += 6;
   doc.text(`Turma: ${classData.name}`, MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text(`Período: ${classData.period}`, MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text(`Ano Letivo: ${classData.year || new Date().getFullYear()}`, MARGIN, yPos);
-  
+
   // Academic Performance
-  yPos += 14;
-  doc.setFontSize(12);
+  yPos += 10;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Desempenho Acadêmico', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5); // Underline
 
-  yPos += 10;
-  doc.setFontSize(10);
-  
+  yPos += 6;
+  doc.setFontSize(9);
+
   // Improved table layout with dynamic row heights
   // Define column widths - wider subject column, narrower grade and status columns
   const colWidths = [CONTENT_WIDTH * 0.6, CONTENT_WIDTH * 0.18, CONTENT_WIDTH * 0.22];
   const COL_PADDING = 2; // reduced padding
-  
+
   // Table headers with background
   let xPos = MARGIN;
   doc.setFont('helvetica', 'bold');
   doc.setFillColor(240, 240, 240);
   doc.rect(MARGIN, yPos - 6, CONTENT_WIDTH, 8, 'F');
-  
+
   doc.text('Disciplina', xPos + COL_PADDING, yPos);
   xPos += colWidths[0];
   doc.text('Nota', xPos + COL_PADDING, yPos);
   xPos += colWidths[1];
   doc.text('Situação', xPos + COL_PADDING, yPos);
-  
+
   // Table content with text wrapping and dynamic row heights
   yPos += 10;
   doc.setFont('helvetica', 'normal');
-  
+
   const subjects = Object.entries(student.subjects);
-  
+
   // Helper function to wrap text and return lines plus height (compact)
   const wrapText = (text, maxWidth) => {
-    const fontSize = 10; // smaller font
+    const fontSize = 9; // optimized font
     doc.setFontSize(fontSize);
 
     const words = text.split(' ');
@@ -134,10 +134,10 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     const totalHeight = lines.length * lineHeight + (2 * COL_PADDING);
     return { lines, height: totalHeight };
   };
-  
+
   for (let i = 0; i < subjects.length; i++) {
     const [subject, data] = subjects[i];
-    
+
     // Check if we need a new page
     if (yPos > PAGE_HEIGHT - MARGIN - 30) {
       doc.addPage();
@@ -148,30 +148,30 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
       doc.text('Continuação - Desempenho Acadêmico', PAGE_WIDTH / 2, yPos, { align: 'center' });
       yPos += 12;
     }
-    
+
     // Wrap subject text
     const wrappedSubject = wrapText(subject, colWidths[0]);
     const rowHeight = Math.max(wrappedSubject.height, 8); // smaller minimum row height
-    
+
     // Zebra pattern for rows
     if (i % 2 === 0) {
       doc.setFillColor(245, 245, 245);
       doc.rect(MARGIN, yPos - 5, CONTENT_WIDTH, rowHeight, 'F');
     }
-    
+
     // Draw subject in the first column with wrapping
     xPos = MARGIN;
     let textYPos = yPos;
-    
+
     wrappedSubject.lines.forEach((line, index) => {
       doc.text(line, xPos + COL_PADDING, textYPos);
       textYPos += 4.2; // compact line spacing
     });
-    
+
     // Draw grade in the second column
     xPos += colWidths[0];
     doc.text(String(data.grade), xPos + COL_PADDING, yPos);
-    
+
     // Draw status in the third column
     xPos += colWidths[1];
     const status = data.grade >= 5 ? 'Aprovado' : 'Abaixo da Média';
@@ -179,56 +179,56 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     doc.setTextColor(color[0], color[1], color[2]);
     doc.text(status, xPos + COL_PADDING, yPos);
     doc.setTextColor(0, 0, 0);
-    
+
     // Update yPos for the next row
     yPos += rowHeight;
   }
-  
+
   // Frequencies
-  yPos += 8;
+  yPos += 6;
   if (yPos > PAGE_HEIGHT - MARGIN - 50) {
     doc.addPage();
     yPos = MARGIN + 10;
   }
 
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Frequência', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5);
 
-  yPos += 8;
-  doc.setFontSize(10);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
+
   doc.text(`Frequência atual: ${formatFrequency(student.frequency)}`, MARGIN, yPos);
   if (student.lowFrequency) {
     doc.setTextColor(220, 53, 69); // Red
     doc.text('(Abaixo do mínimo requerido de 70%)', MARGIN + 90, yPos);
     doc.setTextColor(0, 0, 0); // Reset
   }
-  
-  yPos += 6;
+
+  yPos += 5;
   doc.text(`Total de faltas: ${student.totalAbsences || 0}`, MARGIN, yPos);
 
-  yPos += 6;
+  yPos += 5;
   doc.text(`Frequência anual: ${formatFrequency(student.yearlyFrequency)}`, MARGIN, yPos);
-  
+
   // Behavioral Assessment
-  yPos += 12;
-  doc.setFontSize(12);
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Avaliação Comportamental', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5);
 
-  yPos += 8;
-  doc.setFontSize(10);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
+
   // Check if we need a new page
-    if (yPos > PAGE_HEIGHT - MARGIN - 60) {
-      doc.addPage();
-      yPos = MARGIN + 10;
-    }
+  if (yPos > PAGE_HEIGHT - MARGIN - 60) {
+    doc.addPage();
+    yPos = MARGIN + 10;
+  }
   // Render behavioral codes and observations similar to preview
   if (student.behavioralCodes && student.behavioralCodes.length > 0) {
     // List each code with description if available in behavioralCodeMap
@@ -262,20 +262,20 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
 
   const signatureWidth = 60;
   doc.line(MARGIN, yPos, MARGIN + signatureWidth, yPos);
-  doc.line(PAGE_WIDTH/2 - signatureWidth/2, yPos, PAGE_WIDTH/2 + signatureWidth/2, yPos);
+  doc.line(PAGE_WIDTH / 2 - signatureWidth / 2, yPos, PAGE_WIDTH / 2 + signatureWidth / 2, yPos);
   doc.line(PAGE_WIDTH - MARGIN - signatureWidth, yPos, PAGE_WIDTH - MARGIN, yPos);
 
   yPos += 4;
   doc.setFontSize(9);
-  doc.text('Professor(a)', MARGIN + signatureWidth/2, yPos, { align: 'center' });
-  doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH/2, yPos, { align: 'center' });
-  doc.text('Diretor(a)', PAGE_WIDTH - MARGIN - signatureWidth/2, yPos, { align: 'center' });
+  doc.text('Professor(a)', MARGIN + signatureWidth / 2, yPos, { align: 'center' });
+  doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH / 2, yPos, { align: 'center' });
+  doc.text('Diretor(a)', PAGE_WIDTH - MARGIN - signatureWidth / 2, yPos, { align: 'center' });
 
   // Footer
   doc.setFontSize(7);
   doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, PAGE_HEIGHT - 8);
   doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
-  
+
   return doc;
 };
 
@@ -288,7 +288,7 @@ export const generateCouncilMinutes = (
 ) => {
   const doc = new jsPDF();
   let yPos = MARGIN;
-  
+
   // Add logo (use saved logo for class if available)
   try {
     const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
@@ -302,105 +302,105 @@ export const generateCouncilMinutes = (
     console.error("Error adding logo to PDF:", error);
   }
 
-  yPos = MARGIN + 14;
+  yPos = MARGIN + 10;
 
   // Header
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
 
-  yPos += 8;
-  doc.setFontSize(14);
+  yPos += 6;
+  doc.setFontSize(12);
   doc.text('ATA DO CONSELHO DE CLASSE', PAGE_WIDTH / 2, yPos, { align: 'center' });
 
-  yPos += 12;
-  doc.setFontSize(11);
+  yPos += 8;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  
+
   // Class info in a box (compact)
   doc.setFillColor(240, 240, 240);
-  doc.rect(MARGIN, yPos, CONTENT_WIDTH, 28, 'F');
+  doc.rect(MARGIN, yPos, CONTENT_WIDTH, 22, 'F');
 
-  doc.setFontSize(11);
-  yPos += 8;
+  doc.setFontSize(9);
+  yPos += 6;
   doc.text(`Turma: ${classData.name}`, MARGIN + 5, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text(`Período: ${classData.period}`, MARGIN + 5, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text(`Ano Letivo: ${classData.year || new Date().getFullYear()}`, MARGIN + 5, yPos);
-  
+
   // Date and place
-  yPos += 10;
+  yPos += 8;
   const today = new Date().toLocaleDateString('pt-BR');
   doc.text(`Data: ${today}`, MARGIN, yPos);
   doc.text("Local: Sala da Coordenação", PAGE_WIDTH / 2, yPos);
 
   // Attendees section
-  yPos += 10;
-  doc.setFontSize(12);
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Presentes:', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
 
-  yPos += 8;
-  doc.setFontSize(11);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text("Diretor(a): ______________________________________", MARGIN, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text("Coordenador(a) Pedagógico(a): ______________________________________", MARGIN, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text("Professor(a) Conselheiro(a): ______________________________________", MARGIN, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text("Secretário(a): ______________________________________", MARGIN, yPos);
-  yPos += 6;
+  yPos += 5;
   doc.text("Professores: ______________________________________", MARGIN, yPos);
-  
+
   // Meeting Notes
-  yPos += 12;
-  doc.setFontSize(12);
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Pauta e Deliberações', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
 
-  yPos += 8;
-  doc.setFontSize(11);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const splitNotes = doc.splitTextToSize(minutesNotes, CONTENT_WIDTH);
-  
+
   // Check if notes will fit on current page
-  if (yPos + splitNotes.length * 4.5 > PAGE_HEIGHT - MARGIN - 40) {
+  if (yPos + splitNotes.length * 4 > PAGE_HEIGHT - MARGIN - 40) {
     doc.addPage();
     yPos = MARGIN + 10;
     doc.setFont('helvetica', 'bold');
     doc.text('Pauta e Deliberações (continuação)', MARGIN, yPos);
     doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
-    yPos += 10;
+    yPos += 8;
     doc.setFont('helvetica', 'normal');
   }
 
   doc.text(splitNotes, MARGIN, yPos);
-  yPos += splitNotes.length * 4.5 + 12;
-  
+  yPos += splitNotes.length * 4 + 8;
+
   // Improvement Points
   if (yPos > PAGE_HEIGHT - MARGIN - 60) {
     doc.addPage();
     yPos = MARGIN + 10;
   }
 
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('Pontos de Melhoria Identificados', MARGIN, yPos);
   doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
 
-  yPos += 8;
-  doc.setFontSize(11);
+  yPos += 6;
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const splitPoints = doc.splitTextToSize(improvementPoints, CONTENT_WIDTH);
   doc.text(splitPoints, MARGIN, yPos);
-  
+
   // Student summary statistics
   yPos += splitPoints.length * 4.5 + 12;
-  
+
   if (yPos > PAGE_HEIGHT - MARGIN - 60) {
     doc.addPage();
     yPos = MARGIN + 10;
@@ -420,7 +420,7 @@ export const generateCouncilMinutes = (
   yPos += 6;
   const percentage = classData.totalStudents ? Math.round((classData.belowAverageCount / classData.totalStudents) * 100) : 0;
   doc.text(`Percentual abaixo da média: ${percentage}%`, MARGIN, yPos);
-  
+
   // If provided, render suggested best students (explicit list, no inference)
   if (bestStudents && bestStudents.length > 0) {
     yPos += 8;
@@ -450,26 +450,26 @@ export const generateCouncilMinutes = (
       yPos += 5;
     });
   }
-  
+
   // Signature spaces (compact)
   yPos = PAGE_HEIGHT - MARGIN - 30;
 
   const signatureWidth = 60;
   doc.line(MARGIN, yPos, MARGIN + signatureWidth, yPos);
-  doc.line(PAGE_WIDTH/2 - signatureWidth/2, yPos, PAGE_WIDTH/2 + signatureWidth/2, yPos);
+  doc.line(PAGE_WIDTH / 2 - signatureWidth / 2, yPos, PAGE_WIDTH / 2 + signatureWidth / 2, yPos);
   doc.line(PAGE_WIDTH - MARGIN - signatureWidth, yPos, PAGE_WIDTH - MARGIN, yPos);
 
   yPos += 4;
   doc.setFontSize(9);
-  doc.text('Diretor(a)', MARGIN + signatureWidth/2, yPos, { align: 'center' });
-  doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH/2, yPos, { align: 'center' });
-  doc.text('Professor(a) Conselheiro(a)', PAGE_WIDTH - MARGIN - signatureWidth/2, yPos, { align: 'center' });
+  doc.text('Diretor(a)', MARGIN + signatureWidth / 2, yPos, { align: 'center' });
+  doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH / 2, yPos, { align: 'center' });
+  doc.text('Professor(a) Conselheiro(a)', PAGE_WIDTH - MARGIN - signatureWidth / 2, yPos, { align: 'center' });
 
   // Footer
   doc.setFontSize(7);
   doc.text(`Documento gerado em ${today}`, MARGIN, PAGE_HEIGHT - 8);
   doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
-  
+
   return doc;
 };
 
@@ -478,7 +478,7 @@ const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
     return '0%';
   }
-  
+
   const roundedFreq = Math.round(frequency);
   return `${roundedFreq}%`;
 };
