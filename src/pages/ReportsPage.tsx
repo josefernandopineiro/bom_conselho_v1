@@ -14,7 +14,7 @@ const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
     return '0%';
   }
-  
+
   const roundedFreq = Math.round(frequency);
   return `${roundedFreq}%`;
 };
@@ -27,39 +27,39 @@ const ReportsPage = () => {
   const [improvementPoints, setImprovementPoints] = useState('');
   const [suggestedBest, setSuggestedBest] = useState<string[]>([]);
   const [selectedBest, setSelectedBest] = useState<string[]>([]);
-  
+
   const hasSubjectBelowAverage = (student: any) => {
     return Object.values(student.subjects).some((subject: any) => subject.grade < 5);
   };
-  
+
   const countSubjectsBelowAverage = (student: any) => {
     return Object.values(student.subjects).filter((subject: any) => subject.grade < 5).length;
   };
-  
+
   const getSubjectsBelowAverage = (student: any) => {
     return Object.entries(student.subjects)
       .filter(([_, data]: [string, any]) => data.grade < 5)
       .map(([subject, _]: [string, any]) => subject);
   };
-  
+
   const handleGenerateStudentReport = (studentId: number) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
-    
+
     setSelectedStudentId(studentId);
-    
+
     // build map of code -> description for PDF rendering
-    const codeMap: Record<string,string> = {};
+    const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     const doc = generateStudentReport(student, classData, codeMap);
-    
+
     toast({
       title: "Relatório gerado com sucesso!",
       description: "O relatório do aluno foi gerado e está pronto para download.",
       duration: 3000,
     });
   };
-  
+
   const handleGenerateMinutesReport = () => {
     if (!minutesNotes || !improvementPoints) {
       toast({
@@ -70,14 +70,14 @@ const ReportsPage = () => {
       });
       return;
     }
-    
+
     const bestWithPaee = selectedBest.map(name => {
       const s = students.find(st => st.name === name);
       return `${name}${s && s.paee ? ' (PAEE)' : ''}`;
     });
     const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents());
     doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
-    
+
     toast({
       title: "Ata gerada com sucesso!",
       description: "A ata do conselho de classe foi gerada e está pronta para download.",
@@ -109,15 +109,15 @@ const ReportsPage = () => {
       toast({ variant: 'destructive', title: 'Erro', description: `Não foi possível gerar a Ata em DOCX. ${msg}` });
     }
   };
-  
+
   const handleDownloadReport = () => {
     const student = students.find(s => s.id === selectedStudentId);
     if (!student) return;
-    const codeMap: Record<string,string> = {};
+    const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     const doc = generateStudentReport(student, classData, codeMap);
     doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
-    
+
     toast({
       title: "Download iniciado",
       description: "O download do relatório foi iniciado.",
@@ -129,11 +129,11 @@ const ReportsPage = () => {
     const student = students.find(s => s.id === selectedStudentId);
     if (!student) return;
     try {
-      const blob = await generateStudentDocx(student, classData as any, behavioralCodes.reduce((m:any,c:any)=>{m[c.code]=c.description;return m},{}) );
+      const blob = await generateStudentDocx(student, classData as any, behavioralCodes.reduce((m: any, c: any) => { m[c.code] = c.description; return m }, {}));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      a.download = `relatorio_${student.name.replace(/\s+/g, '_')}.docx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -150,14 +150,14 @@ const ReportsPage = () => {
   const handleDownloadReportDocx = async () => {
     const student = students.find(s => s.id === selectedStudentId);
     if (!student) return;
-    const codeMap: Record<string,string> = {};
+    const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     try {
       const blob = await generateStudentDocx(student, classData, codeMap);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      a.download = `relatorio_${student.name.replace(/\s+/g, '_')}.docx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -173,13 +173,13 @@ const ReportsPage = () => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
     try {
-      const codeMap: Record<string,string> = {};
+      const codeMap: Record<string, string> = {};
       behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
       const blob = await generateStudentDocx(student, classData as any, codeMap);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      a.download = `relatorio_${student.name.replace(/\s+/g, '_')}.docx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -191,53 +191,20 @@ const ReportsPage = () => {
     }
   };
 
-  // DEBUG: generate a minimal DOCX to isolate runtime/library issues
-  const handleTestMinimalDocx = async () => {
-    try {
-      const sampleStudent: any = {
-        id: 0,
-        name: 'Aluno Teste',
-        status: 'OK',
-        averageGrade: 0,
-        behavioralCodes: [],
-        subjects: { 'Matemática': { number: 1, grade: 7, absences: 0, compensatedAbsences: 0 } },
-        totalAbsences: 0,
-        frequency: 100,
-        yearlyAbsences: 0,
-        yearlyFrequency: 100,
-        lowFrequency: false,
-      };
-      const sampleClass: any = { name: 'Turma Teste', year: '2026', period: 'T1', totalStudents: 1, belowAverageCount: 0, subjects: ['Matemática'] };
-      const blob = await generateStudentDocx(sampleStudent, sampleClass, {});
-      console.log('MINIMAL DOCX BLOB', blob);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `test_relatorio.docx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast({ title: 'Teste DOCX gerado', description: 'Arquivo .docx (minimal) foi gerado e o download iniciado.' });
-    } catch (err) {
-      console.error('MINIMAL DOCX ERROR', err);
-      const msg = err instanceof Error ? err.message : String(err);
-      toast({ variant: 'destructive', title: 'Erro no teste DOCX', description: msg });
-    }
-  };
+
 
   // Generate ZIP with all student PDFs and trigger download
   const handleGenerateAllReports = async () => {
     try {
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
-      const codeMap: Record<string,string> = {};
+      const codeMap: Record<string, string> = {};
       behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
 
       for (const student of students) {
         const doc = generateStudentReport(student, classData, codeMap);
         const blob: Blob = doc.output('blob');
-        const filename = `relatorio_${student.name.replace(/\s+/g,'_')}.pdf`;
+        const filename = `relatorio_${student.name.replace(/\s+/g, '_')}.pdf`;
         zip.file(filename, blob);
       }
 
@@ -327,17 +294,14 @@ const ReportsPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-2xl font-bold text-council-primary">Geração de Relatórios</h1>
-          <div className="mt-2 md:mt-0">
-            <Button variant="outline" onClick={handleTestMinimalDocx} className="ml-2">Test DOCX (minimal)</Button>
-          </div>
         </div>
-        
+
         <Tabs defaultValue="student-reports">
           <TabsList className="mb-6">
             <TabsTrigger value="student-reports">Relatórios dos Alunos</TabsTrigger>
             <TabsTrigger value="minutes">Ata do Conselho</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="student-reports">
             <div className="grid grid-cols-1 gap-6">
               <Card>
@@ -387,15 +351,15 @@ const ReportsPage = () => {
                               )}
                             </TableCell>
                             <TableCell>
-                                {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
-                                  <span className="flex items-center">
-                                    <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
-                                      {student.behavioralCodes.join(', ')}
-                                    </span>
+                              {student.behavioralCodes && student.behavioralCodes.length > 0 ? (
+                                <span className="flex items-center">
+                                  <span className="w-6 h-6 rounded-full bg-council-primary text-white text-xs flex items-center justify-center mr-2">
+                                    {student.behavioralCodes.join(', ')}
                                   </span>
-                                ) : (
-                                  <span className="text-gray-400">Não classificado</span>
-                                )}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">Não classificado</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end space-x-2">
@@ -441,7 +405,7 @@ const ReportsPage = () => {
                     <p>Turma: {classData?.name || "Não identificada"}</p>
                     <p>Período: {classData?.period || "Não identificada"}</p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleGenerateAllReports}
                     className="bg-council-primary hover:bg-council-secondary"
                   >
@@ -449,7 +413,7 @@ const ReportsPage = () => {
                   </Button>
                 </CardFooter>
               </Card>
-              
+
               {selectedStudent && (
                 <Card>
                   <CardHeader>
@@ -464,7 +428,7 @@ const ReportsPage = () => {
                         <h2 className="text-xl font-bold">RELATÓRIO DE DESEMPENHO DO ALUNO</h2>
                         <p className="text-gray-600">Conselho de Classe - {classData?.period || "Período não identificado"}</p>
                       </div>
-                      
+
                       <div className="mb-6">
                         <h3 className="font-bold mb-2 border-b pb-1">Identificação</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -478,7 +442,7 @@ const ReportsPage = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="mb-6">
                         <h3 className="font-bold mb-2 border-b pb-1">Desempenho Acadêmico</h3>
                         <div className="overflow-x-auto">
@@ -519,7 +483,7 @@ const ReportsPage = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="mb-6">
                         <h3 className="font-bold mb-2 border-b pb-1">Frequência</h3>
                         <div className="bg-gray-50 p-3 rounded-md">
@@ -537,18 +501,18 @@ const ReportsPage = () => {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="mb-6">
                         <h3 className="font-bold mb-2 border-b pb-1">Avaliação Comportamental</h3>
                         <div className="bg-gray-50 p-3 rounded-md">
                           <p>
                             <span className="font-semibold">Classificação:</span> {
                               selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.length > 0
-                              ? selectedStudent.behavioralCodes.map(code => {
+                                ? selectedStudent.behavioralCodes.map(code => {
                                   const codeObj = behavioralCodes.find(c => c.code === code);
                                   return `${code} - ${codeObj ? codeObj.description : ''}`;
                                 }).join(', ')
-                              : "Não classificado"
+                                : "Não classificado"
                             }
                           </p>
                           <p className="mt-2"><span className="font-semibold">Observações:</span></p>
@@ -566,7 +530,7 @@ const ReportsPage = () => {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="mt-8 pt-4 border-t">
                         <div className="flex justify-between">
                           <div className="w-1/3 border-t pt-2 text-center">
@@ -600,7 +564,7 @@ const ReportsPage = () => {
               )}
             </div>
           </TabsContent>
-          
+
           <TabsContent value="minutes">
             <Card>
               <CardHeader>
@@ -628,7 +592,7 @@ const ReportsPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-md">
                     <h3 className="font-medium text-gray-900 mb-3">Estatísticas da Turma</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -646,7 +610,7 @@ const ReportsPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="minutesNotes" className="block font-medium text-gray-900 mb-2">
                       Anotações da Reunião
@@ -660,7 +624,7 @@ const ReportsPage = () => {
                       onChange={(e) => setMinutesNotes(e.target.value)}
                     ></textarea>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="improvementPoints" className="block font-medium text-gray-900 mb-2">
                       Pontos de Melhoria e Lacunas de Aprendizagem
@@ -674,7 +638,7 @@ const ReportsPage = () => {
                       onChange={(e) => setImprovementPoints(e.target.value)}
                     ></textarea>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-md">
                     <h3 className="font-medium text-gray-900 mb-3">Classificações Comportamentais da Turma</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -736,7 +700,7 @@ const ReportsPage = () => {
                   Data do Conselho: {new Date().toLocaleDateString('pt-BR')}
                 </p>
                 <div className="flex space-x-2">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => {
                       setMinutesNotes('');
@@ -745,7 +709,7 @@ const ReportsPage = () => {
                   >
                     Limpar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleGenerateMinutesReport}
                     className="bg-council-primary hover:bg-council-secondary"
                   >
