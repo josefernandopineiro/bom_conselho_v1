@@ -104,8 +104,9 @@ const ReportsPage = () => {
 
       toast({ title: 'Download DOCX iniciado', description: 'A ata em formato .docx está sendo baixada.' });
     } catch (err) {
-      console.error(err);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar a Ata em DOCX.' });
+      console.error('generateMinutesDocx error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ variant: 'destructive', title: 'Erro', description: `Não foi possível gerar a Ata em DOCX. ${msg}` });
     }
   };
   
@@ -140,8 +141,9 @@ const ReportsPage = () => {
 
       toast({ title: 'Download iniciado', description: 'O documento editável está sendo baixado.' });
     } catch (err) {
-      console.error(err);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o DOCX.' });
+      console.error('generateStudentDocx error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ variant: 'destructive', title: 'Erro', description: `Não foi possível gerar o DOCX. ${msg}` });
     }
   };
 

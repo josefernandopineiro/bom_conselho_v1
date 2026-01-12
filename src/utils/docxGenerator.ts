@@ -45,8 +45,12 @@ export async function generateStudentDocx(student: Student, classData: ClassData
     ]
   });
 
-  const blob = await Packer.toBlob(doc);
-  return blob;
+  try {
+    const blob = await Packer.toBlob(doc);
+    return blob;
+  } catch (err) {
+    throw new Error(`docx: falha ao gerar arquivo (.docx): ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 export async function generateMinutesDocx(
