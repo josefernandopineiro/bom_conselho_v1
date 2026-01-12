@@ -9,7 +9,6 @@ import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 import { generateStudentReport, generateCouncilMinutes } from '@/utils/pdfGenerator';
 import { generateStudentDocx } from '@/utils/docxGenerator';
-import { generateStudentDocx } from '@/utils/docxGenerator';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
@@ -72,7 +71,11 @@ const ReportsPage = () => {
       return;
     }
     
-    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, selectedBest, getAttentionStudents());
+    const bestWithPaee = selectedBest.map(name => {
+      const s = students.find(st => st.name === name);
+      return `${name}${s && s.paee ? ' (PAEE)' : ''}`;
+    });
+    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents());
     doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
     
     toast({
@@ -134,6 +137,28 @@ const ReportsPage = () => {
       a.remove();
       URL.revokeObjectURL(url);
       toast({ title: 'Download DOCX iniciado', description: 'O arquivo .docx está sendo baixado.' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o DOCX.' });
+    }
+  };
+
+  const handleDownloadDocxFor = async (studentId: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    try {
+      const codeMap: Record<string,string> = {};
+      behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
+      const blob = await generateStudentDocx(student, classData as any, codeMap);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_${student.name.replace(/\s+/g,'_')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Download iniciado', description: 'O documento Word está sendo baixado.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o DOCX.' });
@@ -218,11 +243,11 @@ const ReportsPage = () => {
       if (detractorCodes.length > 0) {
         const code = detractorCodes[0];
         const desc = behavioralCodes.find(c => c.code === code)?.description || '';
-        list.push(`${s.name} — ${desc}`);
+        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — ${desc}`);
       } else if (s.lowFrequency) {
-        list.push(`${s.name} — Baixa frequência`);
+        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — Baixa frequência`);
       } else if (belowAvg) {
-        list.push(`${s.name} — Disciplinas abaixo da média`);
+        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — Disciplinas abaixo da média`);
       }
     });
     // remove duplicates
@@ -273,7 +298,9 @@ const ReportsPage = () => {
                       <TableBody>
                         {students.map(student => (
                           <TableRow key={student.id}>
-                            <TableCell className="font-medium">{student.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {student.name} {student.paee ? <span className="text-xs font-semibold ml-2 text-red-700">(PAEE)</span> : null}
+                            </TableCell>
                             <TableCell>
                               {hasSubjectBelowAverage(student) ? (
                                 <span className="text-red-600">
@@ -317,6 +344,15 @@ const ReportsPage = () => {
                                   <FileText className="h-4 w-4 mr-1" />
                                   Gerar
                                 </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center"
+                                  onClick={() => handleDownloadDocxFor(student.id)}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Baixar relatório (Word)
+                                </Button>
                                 {selectedStudentId === student.id && (
                                   <Button
                                     variant="default"
@@ -355,7 +391,7 @@ const ReportsPage = () => {
                   <CardHeader>
                     <CardTitle className="text-council-primary">Pré-visualização do Relatório</CardTitle>
                     <CardDescription>
-                      {selectedStudent.name}
+                      {selectedStudent.name} {selectedStudent.paee ? <span className="text-xs font-semibold ml-2 text-red-700">(PAEE)</span> : null}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -369,7 +405,7 @@ const ReportsPage = () => {
                         <h3 className="font-bold mb-2 border-b pb-1">Identificação</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <p><span className="font-semibold">Aluno(a):</span> {selectedStudent.name}</p>
+                            <p><span className="font-semibold">Aluno(a):</span> {selectedStudent.name} {selectedStudent.paee ? <span className="text-sm font-semibold ml-2 text-red-700">(PAEE)</span> : null}</p>
                             <p><span className="font-semibold">Turma:</span> {classData?.name || "Não identificada"}</p>
                           </div>
                           <div>
@@ -493,7 +529,7 @@ const ReportsPage = () => {
                       onClick={handleDownloadDocx}
                       className="ml-2"
                     >
-                      Baixar (editável – Word)
+                      Baixar relatório (Word)
                     </Button>
                   </CardFooter>
                 </Card>
@@ -614,13 +650,15 @@ const ReportsPage = () => {
                         {suggestedBest.length === 0 && <span className="text-sm text-gray-500">Nenhuma sugestão disponível.</span>}
                         {suggestedBest.map(name => {
                           const isSelected = selectedBest.includes(name);
+                          const stud = students.find(s => s.name === name);
+                          const displayName = `${name}${stud && stud.paee ? ' (PAEE)' : ''}`;
                           return (
                             <Button
                               key={name}
                               variant={isSelected ? 'default' : 'outline'}
                               onClick={() => setSelectedBest(prev => prev.includes(name) ? prev.filter(p => p !== name) : [...prev, name])}
                             >
-                              {name}
+                              {displayName}
                             </Button>
                           );
                         })}

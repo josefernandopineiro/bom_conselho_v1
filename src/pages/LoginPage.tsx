@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import { Eye, EyeOff, Lock, LogIn, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { DEFAULT_LOGO_PATH } from '@/lib/logo';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -52,8 +53,6 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-md p-4">
         <div className="mb-8 text-center">
-import { DEFAULT_LOGO_PATH } from '@/lib/logo';
-
           <img 
             src={DEFAULT_LOGO_PATH}
             alt="Bom Conselho Logo" 

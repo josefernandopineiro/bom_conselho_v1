@@ -5,7 +5,7 @@ import { getLogoForSchool, DEFAULT_LOGO_PATH } from '@/lib/logo';
 
 const PAGE_WIDTH = 210; // A4 width in mm
 const PAGE_HEIGHT = 297; // A4 height in mm
-const MARGIN = 20;
+const MARGIN = 12; // reduced margin to fit more content
 const CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN);
 
 export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string,string>) => {
@@ -17,42 +17,58 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     // doc.addImage accepts dataURL or URL; detect image type for data URLs
     if (typeof logo === 'string' && logo.startsWith('data:image/')) {
       const isPng = logo.startsWith('data:image/png');
-      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 40, 15);
+      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 32, 12);
     } else {
-      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 40, 15);
+      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 32, 12);
     }
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
   
   // Set initial position
-  let yPos = MARGIN + 20;
-  
+  let yPos = MARGIN + 14;
+
   // Header
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
-  
-  yPos += 10;
-  doc.setFontSize(14);
-  doc.text('RELATÓRIO DE DESEMPENHO DO ALUNO', PAGE_WIDTH / 2, yPos, { align: 'center' });
-  
+
   yPos += 8;
   doc.setFontSize(12);
+  doc.text('RELATÓRIO DE DESEMPENHO DO ALUNO', PAGE_WIDTH / 2, yPos, { align: 'center' });
+
+  yPos += 6;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Conselho de Classe - ${classData.period}`, PAGE_WIDTH / 2, yPos, { align: 'center' });
   
   // Student Info
-  yPos += 20;
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Identificação', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2); // Underline
-  
   yPos += 12;
   doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Identificação', MARGIN, yPos);
+  doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5); // Underline
+
+  yPos += 8;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Aluno(a): ${student.name}`, MARGIN, yPos);
+  const baseStudentText = `Aluno(a): ${student.name}`;
+  doc.text(baseStudentText, MARGIN, yPos);
+  if (student.paee) {
+    try {
+      const fontSize = 12;
+      const width = doc.getStringUnitWidth(baseStudentText) * fontSize / doc.internal.scaleFactor;
+      doc.setTextColor(220, 53, 69);
+      doc.text('(PAEE)', MARGIN + width + 2, yPos);
+      doc.setTextColor(0, 0, 0);
+    } catch (err) {
+      // fallback: render on next line
+      yPos += 6;
+      doc.setTextColor(220, 53, 69);
+      doc.text('(PAEE)', MARGIN, yPos);
+      doc.setTextColor(0, 0, 0);
+    }
+  }
   yPos += 8;
   doc.text(`Turma: ${classData.name}`, MARGIN, yPos);
   yPos += 8;
@@ -61,19 +77,19 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   doc.text(`Ano Letivo: ${classData.year || new Date().getFullYear()}`, MARGIN, yPos);
   
   // Academic Performance
-  yPos += 20;
-  doc.setFontSize(14);
+  yPos += 14;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Desempenho Acadêmico', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2); // Underline
-  
-  yPos += 12;
-  doc.setFontSize(11);
+  doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5); // Underline
+
+  yPos += 10;
+  doc.setFontSize(10);
   
   // Improved table layout with dynamic row heights
   // Define column widths - wider subject column, narrower grade and status columns
-  const colWidths = [CONTENT_WIDTH * 0.6, CONTENT_WIDTH * 0.15, CONTENT_WIDTH * 0.25];
-  const COL_PADDING = 3; // padding inside cells
+  const colWidths = [CONTENT_WIDTH * 0.6, CONTENT_WIDTH * 0.18, CONTENT_WIDTH * 0.22];
+  const COL_PADDING = 2; // reduced padding
   
   // Table headers with background
   let xPos = MARGIN;
@@ -93,20 +109,18 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   
   const subjects = Object.entries(student.subjects);
   
-  // Helper function to wrap text and return lines plus height
+  // Helper function to wrap text and return lines plus height (compact)
   const wrapText = (text, maxWidth) => {
-    const fontSize = 11; // current font size
+    const fontSize = 10; // smaller font
     doc.setFontSize(fontSize);
-    
-    // Split text into words
+
     const words = text.split(' ');
-    let lines = [];
-    let currentLine = words[0];
-    
+    let lines: string[] = [];
+    let currentLine = words[0] || '';
+
     for (let i = 1; i < words.length; i++) {
       const word = words[i];
       const width = doc.getStringUnitWidth(currentLine + ' ' + word) * fontSize / doc.internal.scaleFactor;
-      
       if (width < maxWidth - (2 * COL_PADDING)) {
         currentLine += ' ' + word;
       } else {
@@ -114,13 +128,10 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
         currentLine = word;
       }
     }
-    
-    lines.push(currentLine);
-    
-    // Calculate needed height (line height is approximately 1.2 times font size)
-    const lineHeight = fontSize * 0.5; // in mm
+    if (currentLine) lines.push(currentLine);
+
+    const lineHeight = fontSize * 0.45; // compact line height in mm
     const totalHeight = lines.length * lineHeight + (2 * COL_PADDING);
-    
     return { lines, height: totalHeight };
   };
   
@@ -131,21 +142,21 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     if (yPos > PAGE_HEIGHT - MARGIN - 30) {
       doc.addPage();
       yPos = MARGIN + 10;
-      
+
       // Add header for new page
       doc.setFont('helvetica', 'bold');
       doc.text('Continuação - Desempenho Acadêmico', PAGE_WIDTH / 2, yPos, { align: 'center' });
-      yPos += 15;
+      yPos += 12;
     }
     
     // Wrap subject text
     const wrappedSubject = wrapText(subject, colWidths[0]);
-    const rowHeight = Math.max(wrappedSubject.height, 10); // Minimum row height
+    const rowHeight = Math.max(wrappedSubject.height, 8); // smaller minimum row height
     
     // Zebra pattern for rows
     if (i % 2 === 0) {
       doc.setFillColor(245, 245, 245);
-      doc.rect(MARGIN, yPos - 6, CONTENT_WIDTH, rowHeight, 'F');
+      doc.rect(MARGIN, yPos - 5, CONTENT_WIDTH, rowHeight, 'F');
     }
     
     // Draw subject in the first column with wrapping
@@ -154,40 +165,39 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     
     wrappedSubject.lines.forEach((line, index) => {
       doc.text(line, xPos + COL_PADDING, textYPos);
-      textYPos += 5; // Move to next line
+      textYPos += 4.2; // compact line spacing
     });
     
     // Draw grade in the second column
     xPos += colWidths[0];
-    doc.text(data.grade.toString(), xPos + COL_PADDING, yPos);
+    doc.text(String(data.grade), xPos + COL_PADDING, yPos);
     
     // Draw status in the third column
     xPos += colWidths[1];
     const status = data.grade >= 5 ? 'Aprovado' : 'Abaixo da Média';
-    const color = data.grade >= 5 ? [0, 128, 0] : [220, 53, 69]; // green or red
-    
+    const color = data.grade >= 5 ? [0, 128, 0] : [220, 53, 69];
     doc.setTextColor(color[0], color[1], color[2]);
     doc.text(status, xPos + COL_PADDING, yPos);
-    doc.setTextColor(0, 0, 0); // Reset text color
+    doc.setTextColor(0, 0, 0);
     
     // Update yPos for the next row
     yPos += rowHeight;
   }
   
   // Frequencies
-  yPos += 10;
+  yPos += 8;
   if (yPos > PAGE_HEIGHT - MARGIN - 50) {
     doc.addPage();
     yPos = MARGIN + 10;
   }
-  
-  doc.setFontSize(14);
+
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Frequência', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2); // Underline
-  
-  yPos += 12;
-  doc.setFontSize(12);
+  doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5);
+
+  yPos += 8;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
   doc.text(`Frequência atual: ${formatFrequency(student.frequency)}`, MARGIN, yPos);
@@ -197,74 +207,74 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
     doc.setTextColor(0, 0, 0); // Reset
   }
   
-  yPos += 8;
+  yPos += 6;
   doc.text(`Total de faltas: ${student.totalAbsences || 0}`, MARGIN, yPos);
-  
-  yPos += 8;
+
+  yPos += 6;
   doc.text(`Frequência anual: ${formatFrequency(student.yearlyFrequency)}`, MARGIN, yPos);
   
   // Behavioral Assessment
-  yPos += 20;
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Avaliação Comportamental', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2); // Underline
-  
   yPos += 12;
   doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Avaliação Comportamental', MARGIN, yPos);
+  doc.line(MARGIN, yPos + 1.5, PAGE_WIDTH - MARGIN, yPos + 1.5);
+
+  yPos += 8;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
   // Check if we need a new page
-  if (yPos > PAGE_HEIGHT - MARGIN - 60) {
-    doc.addPage();
-    yPos = MARGIN + 10;
-  }
+    if (yPos > PAGE_HEIGHT - MARGIN - 60) {
+      doc.addPage();
+      yPos = MARGIN + 10;
+    }
   // Render behavioral codes and observations similar to preview
   if (student.behavioralCodes && student.behavioralCodes.length > 0) {
     // List each code with description if available in behavioralCodeMap
     student.behavioralCodes.forEach((code: string) => {
       const desc = behavioralCodeMap && behavioralCodeMap[code] ? ` - ${behavioralCodeMap[code]}` : '';
       doc.text(`${code}${desc}`, MARGIN, yPos);
-      yPos += 6;
+      yPos += 5;
     });
-    yPos += 4;
+    yPos += 3;
     const obsText = student.observations && String(student.observations).trim()
       ? String(student.observations).trim()
       : '';
     if (obsText) {
       const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
       doc.text(splitObs, MARGIN, yPos);
-      yPos += splitObs.length * 5 + 6;
+      yPos += splitObs.length * 4.5 + 4;
     }
   } else {
     doc.text('Classificação: Não classificado', MARGIN, yPos);
-    yPos += 8;
+    yPos += 6;
     const obsText = student.observations && String(student.observations).trim() ? String(student.observations).trim() : '';
     if (obsText) {
       const splitObs = doc.splitTextToSize(obsText, CONTENT_WIDTH);
       doc.text(splitObs, MARGIN, yPos);
-      yPos += splitObs.length * 5 + 6;
+      yPos += splitObs.length * 4.5 + 4;
     }
   }
 
   // Signatures
-  yPos = PAGE_HEIGHT - MARGIN - 40;
-  
-  const signatureWidth = 70;
+  yPos = PAGE_HEIGHT - MARGIN - 30;
+
+  const signatureWidth = 60;
   doc.line(MARGIN, yPos, MARGIN + signatureWidth, yPos);
   doc.line(PAGE_WIDTH/2 - signatureWidth/2, yPos, PAGE_WIDTH/2 + signatureWidth/2, yPos);
   doc.line(PAGE_WIDTH - MARGIN - signatureWidth, yPos, PAGE_WIDTH - MARGIN, yPos);
-  
-  yPos += 5;
-  doc.setFontSize(10);
+
+  yPos += 4;
+  doc.setFontSize(9);
   doc.text('Professor(a)', MARGIN + signatureWidth/2, yPos, { align: 'center' });
   doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH/2, yPos, { align: 'center' });
   doc.text('Diretor(a)', PAGE_WIDTH - MARGIN - signatureWidth/2, yPos, { align: 'center' });
-  
+
   // Footer
-  doc.setFontSize(8);
-  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, PAGE_HEIGHT - 10);
-  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 10, { align: 'right' });
+  doc.setFontSize(7);
+  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, PAGE_HEIGHT - 8);
+  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
   
   return doc;
 };
@@ -284,181 +294,181 @@ export const generateCouncilMinutes = (
     const logo = getLogoForSchool(classData?.name) || DEFAULT_LOGO_PATH;
     if (typeof logo === 'string' && logo.startsWith('data:image/')) {
       const isPng = logo.startsWith('data:image/png');
-      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 40, 15);
+      doc.addImage(logo as any, isPng ? 'PNG' : 'JPEG', MARGIN, MARGIN, 32, 12);
     } else {
-      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 40, 15);
+      doc.addImage(logo as any, 'PNG', MARGIN, MARGIN, 32, 12);
     }
   } catch (error) {
     console.error("Error adding logo to PDF:", error);
   }
-  
-  yPos = MARGIN + 20;
-  
+
+  yPos = MARGIN + 14;
+
   // Header
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
-  
-  yPos += 10;
-  doc.setFontSize(16);
+
+  yPos += 8;
+  doc.setFontSize(14);
   doc.text('ATA DO CONSELHO DE CLASSE', PAGE_WIDTH / 2, yPos, { align: 'center' });
-  
-  yPos += 20;
-  doc.setFontSize(12);
+
+  yPos += 12;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   
-  // Class info in a box
+  // Class info in a box (compact)
   doc.setFillColor(240, 240, 240);
-  doc.rect(MARGIN, yPos, CONTENT_WIDTH, 35, 'F');
-  
-  doc.setFontSize(12);
-  yPos += 10;
+  doc.rect(MARGIN, yPos, CONTENT_WIDTH, 28, 'F');
+
+  doc.setFontSize(11);
+  yPos += 8;
   doc.text(`Turma: ${classData.name}`, MARGIN + 5, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text(`Período: ${classData.period}`, MARGIN + 5, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text(`Ano Letivo: ${classData.year || new Date().getFullYear()}`, MARGIN + 5, yPos);
   
   // Date and place
-  yPos += 15;
+  yPos += 10;
   const today = new Date().toLocaleDateString('pt-BR');
   doc.text(`Data: ${today}`, MARGIN, yPos);
   doc.text("Local: Sala da Coordenação", PAGE_WIDTH / 2, yPos);
-  
+
   // Attendees section
-  yPos += 15;
-  doc.setFontSize(14);
+  yPos += 10;
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Presentes:', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2);
-  
-  yPos += 12;
-  doc.setFontSize(12);
+  doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
+
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text("Diretor(a): ______________________________________", MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text("Coordenador(a) Pedagógico(a): ______________________________________", MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text("Professor(a) Conselheiro(a): ______________________________________", MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text("Secretário(a): ______________________________________", MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text("Professores: ______________________________________", MARGIN, yPos);
   
   // Meeting Notes
-  yPos += 20;
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Pauta e Deliberações', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2);
-  
   yPos += 12;
   doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Pauta e Deliberações', MARGIN, yPos);
+  doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
+
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   const splitNotes = doc.splitTextToSize(minutesNotes, CONTENT_WIDTH);
   
   // Check if notes will fit on current page
-  if (yPos + splitNotes.length * 5 > PAGE_HEIGHT - MARGIN - 40) {
+  if (yPos + splitNotes.length * 4.5 > PAGE_HEIGHT - MARGIN - 40) {
     doc.addPage();
     yPos = MARGIN + 10;
     doc.setFont('helvetica', 'bold');
     doc.text('Pauta e Deliberações (continuação)', MARGIN, yPos);
-    doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2);
-    yPos += 12;
+    doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
+    yPos += 10;
     doc.setFont('helvetica', 'normal');
   }
-  
+
   doc.text(splitNotes, MARGIN, yPos);
-  yPos += splitNotes.length * 5 + 15;
+  yPos += splitNotes.length * 4.5 + 12;
   
   // Improvement Points
   if (yPos > PAGE_HEIGHT - MARGIN - 60) {
     doc.addPage();
     yPos = MARGIN + 10;
   }
-  
-  doc.setFontSize(14);
+
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Pontos de Melhoria Identificados', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2);
-  
-  yPos += 12;
-  doc.setFontSize(12);
+  doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
+
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   const splitPoints = doc.splitTextToSize(improvementPoints, CONTENT_WIDTH);
   doc.text(splitPoints, MARGIN, yPos);
   
   // Student summary statistics
-  yPos += splitPoints.length * 5 + 15;
+  yPos += splitPoints.length * 4.5 + 12;
   
   if (yPos > PAGE_HEIGHT - MARGIN - 60) {
     doc.addPage();
     yPos = MARGIN + 10;
   }
-  
-  doc.setFontSize(14);
+
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Resumo da Turma', MARGIN, yPos);
-  doc.line(MARGIN, yPos + 2, PAGE_WIDTH - MARGIN, yPos + 2);
-  
-  yPos += 12;
-  doc.setFontSize(12);
+  doc.line(MARGIN, yPos + 1.2, PAGE_WIDTH - MARGIN, yPos + 1.2);
+
+  yPos += 8;
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text(`Total de alunos: ${classData.totalStudents || 0}`, MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   doc.text(`Alunos abaixo da média: ${classData.belowAverageCount || 0}`, MARGIN, yPos);
-  yPos += 8;
+  yPos += 6;
   const percentage = classData.totalStudents ? Math.round((classData.belowAverageCount / classData.totalStudents) * 100) : 0;
   doc.text(`Percentual abaixo da média: ${percentage}%`, MARGIN, yPos);
   
   // If provided, render suggested best students (explicit list, no inference)
   if (bestStudents && bestStudents.length > 0) {
-    yPos += 10;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Melhores Alunos (sugeridos)', MARGIN, yPos);
     yPos += 8;
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Melhores Alunos (sugeridos)', MARGIN, yPos);
+    yPos += 6;
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     bestStudents.forEach((s, idx) => {
       doc.text(`${idx + 1}. ${s}`, MARGIN + 5, yPos);
-      yPos += 6;
+      yPos += 5;
     });
   }
 
   // Render explicit attention students list (only those passed in)
   if (attentionStudents && attentionStudents.length > 0) {
-    yPos += 10;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Apoio Pedagógico Necessário', MARGIN, yPos);
     yPos += 8;
     doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Apoio Pedagógico Necessário', MARGIN, yPos);
+    yPos += 6;
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     attentionStudents.forEach(s => {
       doc.text(`- ${s}`, MARGIN + 5, yPos);
-      yPos += 6;
+      yPos += 5;
     });
   }
   
-  // Signature spaces
-  yPos = PAGE_HEIGHT - MARGIN - 40;
-  
-  const signatureWidth = 70;
+  // Signature spaces (compact)
+  yPos = PAGE_HEIGHT - MARGIN - 30;
+
+  const signatureWidth = 60;
   doc.line(MARGIN, yPos, MARGIN + signatureWidth, yPos);
   doc.line(PAGE_WIDTH/2 - signatureWidth/2, yPos, PAGE_WIDTH/2 + signatureWidth/2, yPos);
   doc.line(PAGE_WIDTH - MARGIN - signatureWidth, yPos, PAGE_WIDTH - MARGIN, yPos);
-  
-  yPos += 5;
-  doc.setFontSize(10);
+
+  yPos += 4;
+  doc.setFontSize(9);
   doc.text('Diretor(a)', MARGIN + signatureWidth/2, yPos, { align: 'center' });
   doc.text('Coordenador(a) Pedagógico(a)', PAGE_WIDTH/2, yPos, { align: 'center' });
   doc.text('Professor(a) Conselheiro(a)', PAGE_WIDTH - MARGIN - signatureWidth/2, yPos, { align: 'center' });
-  
+
   // Footer
-  doc.setFontSize(8);
-  doc.text(`Documento gerado em ${today}`, MARGIN, PAGE_HEIGHT - 10);
-  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 10, { align: 'right' });
+  doc.setFontSize(7);
+  doc.text(`Documento gerado em ${today}`, MARGIN, PAGE_HEIGHT - 8);
+  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
   
   return doc;
 };
