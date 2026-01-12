@@ -83,8 +83,12 @@ export function processStudentRows(
 
   // Final safety: if both detected as same index, unset yearly to avoid duplication
   if (freqCol !== -1 && freqAnCol === freqCol) {
+    console.warn(`[studentProcessor] Fre% e Fre An% apontam para a mesma coluna (${freqCol}). Usando para período apenas.`);
     freqAnCol = -1;
   }
+
+  // Log de debug para verificar detecção
+  console.log(`[studentProcessor] Colunas detectadas: freqCol=${freqCol}, freqAnCol=${freqAnCol}, tfCol=${tfCol}, ftAnCol=${ftAnCol}, paeeCol=${paeeCol}`);
 
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
