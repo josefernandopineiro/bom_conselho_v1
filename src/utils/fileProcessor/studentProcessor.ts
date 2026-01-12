@@ -91,6 +91,14 @@ export function processStudentRows(
   // Log de debug para verificar detecção
   console.log(`[studentProcessor] Colunas detectadas: freqCol=${freqCol}, freqAnCol=${freqAnCol}, tfCol=${tfCol}, ftAnCol=${ftAnCol}, paeeCol=${paeeCol}`);
 
+  // Log headers para debug
+  if (freqAnCol > -1) {
+    const { header: h, sub: s } = cellText(freqAnCol);
+    console.log(`[studentProcessor] Coluna Fre An(%) detectada no índice ${freqAnCol}: header="${h}", sub="${s}"`);
+  } else {
+    console.warn(`[studentProcessor] ⚠️ Coluna Fre An(%) NÃO DETECTADA! Verifique o header do Excel.`);
+  }
+
   for (let i = headerRow + 1; i < jsonData.length; i++) {
     const row = jsonData[i];
     if (!row || !Array.isArray(row) || !row[0]) continue;
@@ -143,7 +151,17 @@ export function processStudentRows(
 
     const totalAbsences = tfCol > -1 ? (Number(row[tfCol]) || totalStudentAbsences) : totalStudentAbsences;
     let frequency = freqCol > -1 ? convertToPercentage(row[freqCol]) : NaN;
-    let yearlyFrequency = freqAnCol > -1 ? convertToPercentage(row[freqAnCol]) : NaN;
+
+    // CRITICAL: Read annual frequency from Excel with detailed logging
+    let yearlyFrequency = NaN;
+    if (freqAnCol > -1) {
+      const rawValue = row[freqAnCol];
+      console.log(`[studentProcessor] Aluno "${name}": Lendo Fre An(%) da coluna ${freqAnCol}, valor bruto="${rawValue}"`);
+      yearlyFrequency = convertToPercentage(rawValue);
+      console.log(`[studentProcessor] Aluno "${name}": Fre An(%) convertido = ${yearlyFrequency}${isNaN(yearlyFrequency) ? ' (NaN - valor inválido!)' : '%'}`);
+    } else {
+      console.warn(`[studentProcessor] Aluno "${name}": freqAnCol=-1, coluna Fre An(%) não detectada`);
+    }
     const paeeFlag = paeeCol > -1 ? (() => {
       const val = String(row[paeeCol] || '').trim().toUpperCase();
       // Aceita: "SIM", "S", "X", "1", "TRUE", "PAEE", ou qualquer texto não-vazio
@@ -165,18 +183,24 @@ export function processStudentRows(
     let manualYearlyFrequency = false;
     if (isNaN(yearlyFrequency) && totalClassesPerPeriod) {
       const yearlyAbsences = ftAnCol > -1 ? (Number(row[ftAnCol]) || 0) : 0;
+      console.log(`[studentProcessor] Aluno "${name}": Fre An(%) é NaN, tentando calcular a partir de faltas anuais (${yearlyAbsences})`);
       if (yearlyAbsences > 0) {
         yearlyFrequency = calculateFrequency(yearlyAbsences, (totalClassesPerPeriod || 111) * 2);
         manualYearlyFrequency = true;
+        console.log(`[studentProcessor] Aluno "${name}": Fre An(%) calculado = ${yearlyFrequency}%`);
       } else {
         // Se não tem faltas anuais no Excel, não inventa dados
+        console.warn(`[studentProcessor] Aluno "${name}": ⚠️ Fre An(%) não encontrado no Excel e sem faltas anuais para calcular. Será 0.`);
         yearlyFrequency = NaN;
       }
     }
 
     // Converte NaN para 0 apenas para exibição (mantém distinção interna)
     if (isNaN(frequency)) frequency = 0;
-    if (isNaN(yearlyFrequency)) yearlyFrequency = 0;
+    if (isNaN(yearlyFrequency)) {
+      console.warn(`[studentProcessor] Aluno "${name}": ⚠️ Fre An(%) final = 0 (era NaN)`);
+      yearlyFrequency = 0;
+    }
 
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
 
