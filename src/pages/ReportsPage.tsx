@@ -191,6 +191,41 @@ const ReportsPage = () => {
     }
   };
 
+  // DEBUG: generate a minimal DOCX to isolate runtime/library issues
+  const handleTestMinimalDocx = async () => {
+    try {
+      const sampleStudent: any = {
+        id: 0,
+        name: 'Aluno Teste',
+        status: 'OK',
+        averageGrade: 0,
+        behavioralCodes: [],
+        subjects: { 'Matemática': { number: 1, grade: 7, absences: 0, compensatedAbsences: 0 } },
+        totalAbsences: 0,
+        frequency: 100,
+        yearlyAbsences: 0,
+        yearlyFrequency: 100,
+        lowFrequency: false,
+      };
+      const sampleClass: any = { name: 'Turma Teste', year: '2026', period: 'T1', totalStudents: 1, belowAverageCount: 0, subjects: ['Matemática'] };
+      const blob = await generateStudentDocx(sampleStudent, sampleClass, {});
+      console.log('MINIMAL DOCX BLOB', blob);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `test_relatorio.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Teste DOCX gerado', description: 'Arquivo .docx (minimal) foi gerado e o download iniciado.' });
+    } catch (err) {
+      console.error('MINIMAL DOCX ERROR', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ variant: 'destructive', title: 'Erro no teste DOCX', description: msg });
+    }
+  };
+
   // Generate ZIP with all student PDFs and trigger download
   const handleGenerateAllReports = async () => {
     try {
@@ -292,6 +327,9 @@ const ReportsPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-2xl font-bold text-council-primary">Geração de Relatórios</h1>
+          <div className="mt-2 md:mt-0">
+            <Button variant="outline" onClick={handleTestMinimalDocx} className="ml-2">Test DOCX (minimal)</Button>
+          </div>
         </div>
         
         <Tabs defaultValue="student-reports">
