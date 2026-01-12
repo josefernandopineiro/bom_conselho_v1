@@ -2,6 +2,7 @@
 import { Student } from '@/types/student';
 import { findHeaderRow } from './subjectExtractors';
 import { calculateFrequency, convertToPercentage } from './calculationUtils';
+import { validateStudentData } from './validator';
 
 /**
  * Process the student data rows from the file
@@ -179,7 +180,7 @@ export function processStudentRows(
 
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;
 
-    students.push({
+    const student: Student = {
       id: i - headerRow,
       name,
       status,
@@ -194,7 +195,15 @@ export function processStudentRows(
       paee: paeeFlag,
       manualFrequency: manualFrequency || manualYearlyFrequency,
       totalClasses: totalClassesPerPeriod
-    });
+    };
+
+    // Validação de schema (apenas warnings, não bloqueia)
+    const validation = validateStudentData(student);
+    if (!validation.success) {
+      console.warn(`[studentProcessor] Aluno "${name}" tem dados inválidos:`, validation.error.format());
+    }
+
+    students.push(student);
   }
 
   return students;
