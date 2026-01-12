@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 import { generateStudentReport, generateCouncilMinutes } from '@/utils/pdfGenerator';
-import { generateStudentDocx } from '@/utils/docxGenerator';
+import { generateStudentDocx, generateMinutesDocx } from '@/utils/docxGenerator';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
@@ -83,6 +83,30 @@ const ReportsPage = () => {
       description: "A ata do conselho de classe foi gerada e está pronta para download.",
       duration: 3000,
     });
+  };
+
+  const handleDownloadMinutesDocx = async () => {
+    if (!minutesNotes || !improvementPoints) {
+      toast({ variant: 'destructive', title: 'Campos obrigatórios', description: 'Preencha as anotações e pontos de melhoria antes de gerar o DOCX.' });
+      return;
+    }
+
+    try {
+      const blob = await generateMinutesDocx(classData, minutesNotes, improvementPoints, selectedBest, getAttentionStudents());
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Download DOCX iniciado', description: 'A ata em formato .docx está sendo baixada.' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar a Ata em DOCX.' });
+    }
   };
   
   const handleDownloadReport = () => {
@@ -687,6 +711,13 @@ const ReportsPage = () => {
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Gerar Ata
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadMinutesDocx}
+                    className="ml-2"
+                  >
+                    Baixar Ata (Word)
                   </Button>
                 </div>
               </CardFooter>
