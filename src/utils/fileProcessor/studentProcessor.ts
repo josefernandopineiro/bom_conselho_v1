@@ -149,14 +149,27 @@ export function processStudentRows(
       return val.length > 0; // Qualquer outro texto não-vazio = true
     })() : false;
 
-    if ((isNaN(frequency) || frequency === 0) && totalClassesPerPeriod) {
+
+    // Apenas calcula frequência se NaN (ausente), NÃO se for 0 (pode ser real)
+    let manualFrequency = false;
+    if (isNaN(frequency) && totalClassesPerPeriod) {
       frequency = calculateFrequency(totalAbsences, totalClassesPerPeriod);
-    }
-    if ((isNaN(yearlyFrequency) || yearlyFrequency === 0) && totalClassesPerPeriod) {
-      const yearlyAbsences = ftAnCol > -1 ? (Number(row[ftAnCol]) || totalAbsences * 2) : totalAbsences * 2;
-      yearlyFrequency = calculateFrequency(yearlyAbsences, (totalClassesPerPeriod || 111) * 2);
+      manualFrequency = true;
     }
 
+    let manualYearlyFrequency = false;
+    if (isNaN(yearlyFrequency) && totalClassesPerPeriod) {
+      const yearlyAbsences = ftAnCol > -1 ? (Number(row[ftAnCol]) || 0) : 0;
+      if (yearlyAbsences > 0) {
+        yearlyFrequency = calculateFrequency(yearlyAbsences, (totalClassesPerPeriod || 111) * 2);
+        manualYearlyFrequency = true;
+      } else {
+        // Se não tem faltas anuais no Excel, não inventa dados
+        yearlyFrequency = NaN;
+      }
+    }
+
+    // Converte NaN para 0 apenas para exibição (mantém distinção interna)
     if (isNaN(frequency)) frequency = 0;
     if (isNaN(yearlyFrequency)) yearlyFrequency = 0;
 
@@ -171,11 +184,11 @@ export function processStudentRows(
       subjects: studentSubjects,
       totalAbsences,
       frequency,
-      yearlyAbsences: ftAnCol > -1 ? (Number(row[ftAnCol]) || totalAbsences * 2) : totalAbsences * 2,
+      yearlyAbsences: ftAnCol > -1 ? (Number(row[ftAnCol]) || 0) : 0,
       yearlyFrequency,
       lowFrequency,
       paee: paeeFlag,
-      manualFrequency: false,
+      manualFrequency: manualFrequency || manualYearlyFrequency,
       totalClasses: totalClassesPerPeriod
     });
   }
