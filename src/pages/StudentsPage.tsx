@@ -16,9 +16,9 @@ import { useStudents } from '@/context/StudentsContext';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
-    return '0%';
+    return '-';
   }
-  
+
   const roundedFreq = Math.round(frequency);
   return `${roundedFreq}%`;
 };
@@ -41,18 +41,18 @@ const StudentsPage = () => {
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     // Calculate subjects below average count
     const belowAvgSubjectCount = Object.values(student.subjects).filter(
       subject => (subject as any).grade < 5
     ).length;
-    
-    const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'below-average' && belowAvgSubjectCount > 0) ||
-                          (filterStatus === 'above-average' && belowAvgSubjectCount === 0) ||
-                          (filterStatus === 'low-frequency' && student.lowFrequency) ||
-                          (filterStatus === 'not-classified' && student.behavioralCodes.length === 0) ||
-                          (filterStatus === 'classified' && student.behavioralCodes.length > 0);
+
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'below-average' && belowAvgSubjectCount > 0) ||
+      (filterStatus === 'above-average' && belowAvgSubjectCount === 0) ||
+      (filterStatus === 'low-frequency' && student.lowFrequency) ||
+      (filterStatus === 'not-classified' && student.behavioralCodes.length === 0) ||
+      (filterStatus === 'classified' && student.behavioralCodes.length > 0);
     return matchesSearch && matchesStatus;
   });
 
@@ -68,7 +68,7 @@ const StudentsPage = () => {
       : [...selectedStudent.behavioralCodes, value];
 
     updateStudentBehavioralCodes(selectedStudent.id, updatedCodes);
-    
+
     setSelectedStudent({
       ...selectedStudent,
       behavioralCodes: updatedCodes
@@ -84,14 +84,14 @@ const StudentsPage = () => {
   const getBadgeForSubject = (grade: number) => {
     if (grade >= 5) {
       return <span className="text-green-600 flex items-center justify-end">
-               <CheckCircle className="h-4 w-4 mr-1" />
-               Aprovado
-             </span>;
+        <CheckCircle className="h-4 w-4 mr-1" />
+        Aprovado
+      </span>;
     } else {
       return <span className="text-red-600 flex items-center justify-end">
-               <AlertCircle className="h-4 w-4 mr-1" />
-               Abaixo da média
-             </span>;
+        <AlertCircle className="h-4 w-4 mr-1" />
+        Abaixo da média
+      </span>;
     }
   };
 
@@ -117,7 +117,7 @@ const StudentsPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-2xl font-bold text-council-primary">Análise de Alunos</h1>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -129,7 +129,7 @@ const StudentsPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-gray-500" />
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -161,16 +161,15 @@ const StudentsPage = () => {
                     filteredStudents.map(student => (
                       <div
                         key={student.id}
-                        className={`p-3 rounded-md cursor-pointer transition-colors ${
-                          selectedStudent?.id === student.id
+                        className={`p-3 rounded-md cursor-pointer transition-colors ${selectedStudent?.id === student.id
                             ? 'bg-council-primary text-white'
                             : 'bg-gray-50 hover:bg-gray-100'
-                        }`}
+                          }`}
                         onClick={() => handleSelectStudent(student)}
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                              <h3 className={`font-medium ${selectedStudent?.id === student.id ? 'text-white' : 'text-gray-900'}`}>
+                            <h3 className={`font-medium ${selectedStudent?.id === student.id ? 'text-white' : 'text-gray-900'}`}>
                               {student.name} {student.paee ? <span className="text-xs font-semibold ml-2">(PAEE)</span> : null}
                             </h3>
                             <p className={`text-sm ${selectedStudent?.id === student.id ? 'text-gray-100' : 'text-gray-500'}`}>
@@ -233,7 +232,7 @@ const StudentsPage = () => {
             {selectedStudent ? (
               <Card>
                 <CardHeader>
-                    <CardTitle className="text-xl text-council-primary flex justify-between items-center">
+                  <CardTitle className="text-xl text-council-primary flex justify-between items-center">
                     <span>{selectedStudent.name} {selectedStudent.paee ? <span className="text-sm font-semibold ml-2">(PAEE)</span> : null}</span>
                     <div className="flex items-center gap-2">
                       {selectedStudent.lowFrequency && (
@@ -257,7 +256,7 @@ const StudentsPage = () => {
                       <TabsTrigger value="frequency">Frequência</TabsTrigger>
                       <TabsTrigger value="behavioral">Classificação Comportamental</TabsTrigger>
                     </TabsList>
-                    
+
                     <TabsContent value="grades">
                       <Table>
                         <TableHeader>
@@ -299,7 +298,7 @@ const StudentsPage = () => {
                         </TableBody>
                       </Table>
                     </TabsContent>
-                    
+
                     <TabsContent value="frequency">
                       <Table>
                         <TableHeader>
@@ -350,7 +349,7 @@ const StudentsPage = () => {
                         </TableBody>
                       </Table>
                     </TabsContent>
-                    
+
                     <TabsContent value="behavioral">
                       <div className="space-y-6">
                         <div className="bg-gray-50 p-4 rounded-md">
@@ -358,12 +357,12 @@ const StudentsPage = () => {
                           <p className="text-sm text-gray-600 mb-4">
                             Selecione a classificação comportamental que melhor descreve o aluno com base na análise do conselho de classe.
                           </p>
-                          
+
                           <div className="flex flex-wrap gap-2">
                             {behavioralOptions.map(option => {
                               const isSelected = selectedStudent.behavioralCodes && selectedStudent.behavioralCodes.includes(option.value);
                               return (
-                                <Button 
+                                <Button
                                   key={option.value}
                                   variant={isSelected ? "default" : "outline"}
                                   onClick={() => handleBehavioralChange(option.value)}
@@ -382,7 +381,7 @@ const StudentsPage = () => {
                             <label className="flex items-center space-x-2">
                               <input type="checkbox" checked={!!selectedStudent.paee} onChange={(e) => {
                                 updateStudentPaee(selectedStudent.id, e.target.checked);
-                                setSelectedStudent({...selectedStudent, paee: e.target.checked});
+                                setSelectedStudent({ ...selectedStudent, paee: e.target.checked });
                                 toast({ title: 'Atualizado', description: `Flag PAEE atualizada para ${selectedStudent.name}` });
                               }} />
                               <span className="text-sm">Aluno PAEE</span>
@@ -395,11 +394,11 @@ const StudentsPage = () => {
                           <div className="space-y-3 text-sm">
                             {behavioralCodes.map(code => (
                               <div key={code.code} className="flex items-start space-x-2">
-                                <div 
-                                  className="font-semibold px-2 py-1 rounded" 
-                                  style={{ 
-                                    backgroundColor: `${code.color}20`, 
-                                    color: code.color 
+                                <div
+                                  className="font-semibold px-2 py-1 rounded"
+                                  style={{
+                                    backgroundColor: `${code.color}20`,
+                                    color: code.color
                                   }}
                                 >
                                   {code.code}
@@ -411,31 +410,31 @@ const StudentsPage = () => {
                             ))}
                           </div>
                         </div>
-                        
-                          <div className="bg-gray-50 p-4 rounded-md">
-                            <h3 className="font-medium text-gray-900 mb-2">Observações (visíveis no PDF)</h3>
-                            <p className="text-sm text-gray-600 mb-2">Registre observações livres sobre o aluno; serão incluídas no PDF e salvas localmente.</p>
-                            <textarea
-                              rows={4}
-                              className="w-full border border-gray-300 rounded-md p-2"
-                              value={selectedStudent?.observations || ''}
-                              onChange={(e) => setSelectedStudent({ ...selectedStudent, observations: e.target.value })}
-                            />
-                            <div className="mt-2 flex justify-end">
-                              <Button
-                                onClick={() => {
-                                  if (!selectedStudent) return;
-                                  updateStudentObservations(selectedStudent.id, selectedStudent.observations || '');
-                                  // also update local selectedStudent to keep UI in sync
-                                  setSelectedStudent({ ...selectedStudent });
-                                  toast({ title: 'Observações salvas', duration: 2000 });
-                                }}
-                                className="bg-council-primary hover:bg-council-secondary"
-                              >
-                                Salvar Observações
-                              </Button>
-                            </div>
+
+                        <div className="bg-gray-50 p-4 rounded-md">
+                          <h3 className="font-medium text-gray-900 mb-2">Observações (visíveis no PDF)</h3>
+                          <p className="text-sm text-gray-600 mb-2">Registre observações livres sobre o aluno; serão incluídas no PDF e salvas localmente.</p>
+                          <textarea
+                            rows={4}
+                            className="w-full border border-gray-300 rounded-md p-2"
+                            value={selectedStudent?.observations || ''}
+                            onChange={(e) => setSelectedStudent({ ...selectedStudent, observations: e.target.value })}
+                          />
+                          <div className="mt-2 flex justify-end">
+                            <Button
+                              onClick={() => {
+                                if (!selectedStudent) return;
+                                updateStudentObservations(selectedStudent.id, selectedStudent.observations || '');
+                                // also update local selectedStudent to keep UI in sync
+                                setSelectedStudent({ ...selectedStudent });
+                                toast({ title: 'Observações salvas', duration: 2000 });
+                              }}
+                              className="bg-council-primary hover:bg-council-secondary"
+                            >
+                              Salvar Observações
+                            </Button>
                           </div>
+                        </div>
                       </div>
                     </TabsContent>
                   </Tabs>

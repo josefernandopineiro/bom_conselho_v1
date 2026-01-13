@@ -37,3 +37,12 @@ export interface BehavioralCode {
   description: string;
   color: string;
 }
+
+export interface SchoolInfo {
+  name: string;
+  director: string;
+  coordinator: string;
+  address: string;
+  phone: string;
+  email: string;
+}

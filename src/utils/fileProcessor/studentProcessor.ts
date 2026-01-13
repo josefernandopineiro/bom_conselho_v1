@@ -3,6 +3,7 @@ import { Student } from '@/types/student';
 import { findHeaderRow } from './subjectExtractors';
 import { calculateFrequency, convertToPercentage } from './calculationUtils';
 import { validateStudentData } from './validator';
+import { identifyColumn, ColumnType } from './headerNormalizer';
 
 /**
  * Process the student data rows from the file
@@ -42,44 +43,20 @@ export function processStudentRows(
 
   const isMatch = (text: string, pattern: RegExp) => pattern.test(String(text || ''));
 
-  // First pass: detect TOTAL and TF and FTAN and PAEE
-  for (let i = 0; i < header.length; i++) {
-    const { header: h, sub: s, combined } = cellText(i);
-    const up = `${h} ${s}`.toUpperCase();
-    if (/^TOTAL$/i.test(h) || /^TOTAL$/i.test(up)) totalCol = i;
-    if (/^TF$/i.test(h) || /^TF$/i.test(up) || /^TOTAL\s*FALTAS$/i.test(up)) tfCol = i;
-    if (/FTAN|FT\s*AN|FALTAS\s*ANUAL/i.test(h) || /FTAN|FTAN/i.test(up)) ftAnCol = i;
-    if (/PAEE|PAE\b|ALUNO\s*PAEE/i.test(h) || /PAEE/i.test(up)) paeeCol = i;
-  }
-  // Second pass: detect frequency columns explicitly and distinctly
-  // We'll scan headers and subheaders looking for explicit markers.
-  for (let i = 0; i < header.length; i++) {
+  // Calculate max length to cover all subheader columns (crucial for merged headers like TOTAL)
+  const maxLen = labelRows.reduce((max, row) => Math.max(max, (row && row.length) || 0), 0);
+
+  // Robust Column Identification using centralized normalizer
+  for (let i = 0; i < maxLen; i++) {
     const { header: h, sub: s } = cellText(i);
-    const combined = `${h} ${s}`.toUpperCase();
+    const type = identifyColumn(h, s);
 
-    // Prefer explicit yearly markers - FIXED to detect "Fre An(%)" format
-    if (freqAnCol === -1 && /\bFRE\b.*\bAN\b.*\(%?\)|\bFRE\s*AN\s*\(%\)|\bFREAN\b|\bFREQUEN[CÇ]A.*ANUAL\b/i.test(combined)) {
-      freqAnCol = i;
-      continue;
-    }
-  }
-
-  for (let i = 0; i < header.length; i++) {
-    const { header: h, sub: s } = cellText(i);
-    const combined = `${h} ${s}`.toUpperCase();
-
-    // Skip if this is the column already identified as yearly
-    if (i === freqAnCol) continue;
-
-    // Exclude per-discipline 'F' or 'FALTAS' columns by checking for exact small labels
-    const looksLikePerDisciplineF = /^F$/.test((s || '').trim()) || /\bFALTAS\b/.test(combined) || /\bAC\b/.test((s || '').trim());
-    if (looksLikePerDisciplineF) continue;
-
-    // Period frequency markers: 'FRE', 'FRE(%)', 'FRE %', but avoid ones already marked as annual
-    if (freqCol === -1 && (/\bFRE\b/.test(combined) || /FRE\s*\(|FRE.*%/.test(combined)) && !/\bAN\b|ANUAL|FRE.*AN/.test(combined)) {
-      freqCol = i;
-      continue;
-    }
+    if (type === ColumnType.Total) totalCol = i;
+    else if (type === ColumnType.TotalAbsences) tfCol = i;
+    else if (type === ColumnType.PeriodAttendance) freqCol = i;
+    else if (type === ColumnType.AnnualAbsences) ftAnCol = i;
+    else if (type === ColumnType.AnnualAttendance) freqAnCol = i;
+    else if (type === ColumnType.PAEE) paeeCol = i;
   }
 
   // Final safety: if both detected as same index, unset yearly to avoid duplication
@@ -198,8 +175,8 @@ export function processStudentRows(
     // Converte NaN para 0 apenas para exibição (mantém distinção interna)
     if (isNaN(frequency)) frequency = 0;
     if (isNaN(yearlyFrequency)) {
-      console.warn(`[studentProcessor] Aluno "${name}": ⚠️ Fre An(%) final = 0 (era NaN)`);
-      yearlyFrequency = 0;
+      console.warn(`[studentProcessor] Aluno "${name}": ⚠️ Fre An(%) final = NaN (Valor ausente ou inválido)`);
+      // User explicitly forbade silent fallback to 0. Leaving as NaN.
     }
 
     const lowFrequency = frequency < 70 || yearlyFrequency < 70;

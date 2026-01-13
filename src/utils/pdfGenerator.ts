@@ -8,7 +8,7 @@ const PAGE_HEIGHT = 297; // A4 height in mm
 const MARGIN = 10; // optimized margin for printing
 const CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN);
 
-export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string, string>) => {
+export const generateStudentReport = (student: Student, classData: ClassData, behavioralCodeMap?: Record<string, string>, schoolInfo?: { name: string }) => {
   const doc = new jsPDF();
 
   // Add logo (use saved logo for class if available)
@@ -28,10 +28,12 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   // Set initial position
   let yPos = MARGIN + 10;
 
+  const schoolName = schoolInfo?.name || 'BOM CONSELHO';
+
   // Header
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
+  doc.text(schoolName.toUpperCase(), PAGE_WIDTH / 2, yPos, { align: 'center' });
 
   yPos += 6;
   doc.setFontSize(11);
@@ -42,7 +44,12 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   doc.setFont('helvetica', 'normal');
   doc.text(`Conselho de Classe - ${classData.period}`, PAGE_WIDTH / 2, yPos, { align: 'center' });
 
-  // Student Info
+  // Student Info (rest is same)
+  // ... (skip content that didn't change to save tokens, only signature changed) ...
+  // Wait, I need to match the replacement block properly. I'll replace the whole function start until Student Info.
+
+  // Actually, I can rely on the fact that I requested to replace 'generateStudentReport = ...' down to the header logic.
+
   yPos += 8;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -274,7 +281,7 @@ export const generateStudentReport = (student: Student, classData: ClassData, be
   // Footer
   doc.setFontSize(7);
   doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, PAGE_HEIGHT - 8);
-  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
+  doc.text(schoolName, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
 
   return doc;
 };
@@ -284,7 +291,8 @@ export const generateCouncilMinutes = (
   minutesNotes: string,
   improvementPoints: string,
   bestStudents: string[] = [],
-  attentionStudents: string[] = []
+  attentionStudents: { name: string, classifications: string[] }[] = [],
+  schoolInfo?: { name: string, director: string, coordinator: string }
 ) => {
   const doc = new jsPDF();
   let yPos = MARGIN;
@@ -304,10 +312,14 @@ export const generateCouncilMinutes = (
 
   yPos = MARGIN + 10;
 
+  const schoolName = schoolInfo?.name || 'BOM CONSELHO';
+  const directorName = schoolInfo?.director || '______________________________________';
+  const coordName = schoolInfo?.coordinator || '______________________________________';
+
   // Header
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('BOM CONSELHO', PAGE_WIDTH / 2, yPos, { align: 'center' });
+  doc.text(schoolName.toUpperCase(), PAGE_WIDTH / 2, yPos, { align: 'center' });
 
   yPos += 6;
   doc.setFontSize(12);
@@ -345,14 +357,13 @@ export const generateCouncilMinutes = (
   yPos += 6;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text("Diretor(a): ______________________________________", MARGIN, yPos);
+  doc.text(`Diretor(a): ${directorName === '______________________________________' ? directorName : directorName + ' (ou representante)'}`, MARGIN, yPos);
   yPos += 5;
-  doc.text("Coordenador(a) Pedagógico(a): ______________________________________", MARGIN, yPos);
+  doc.text(`Coordenador(a) Pedagógico(a): ${coordName === '______________________________________' ? coordName : coordName}`, MARGIN, yPos);
   yPos += 5;
   doc.text("Professor(a) Conselheiro(a): ______________________________________", MARGIN, yPos);
   yPos += 5;
-  doc.text("Secretário(a): ______________________________________", MARGIN, yPos);
-  yPos += 5;
+  // Removed Secretário(a) as requested
   doc.text("Professores: ______________________________________", MARGIN, yPos);
 
   // Meeting Notes
@@ -436,23 +447,62 @@ export const generateCouncilMinutes = (
     });
   }
 
-  // Render explicit attention students list (only those passed in)
+  // Render explicit attention students list (updated structure)
   if (attentionStudents && attentionStudents.length > 0) {
     yPos += 8;
+    // Check page break before starting list
+    if (yPos > PAGE_HEIGHT - MARGIN - 40) {
+      doc.addPage();
+      yPos = MARGIN + 10;
+    }
+
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('Apoio Pedagógico Necessário', MARGIN, yPos);
     yPos += 6;
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    attentionStudents.forEach(s => {
-      doc.text(`- ${s}`, MARGIN + 5, yPos);
+
+    attentionStudents.forEach(item => {
+      // Check for page break inside list
+      if (yPos > PAGE_HEIGHT - MARGIN - 20) {
+        doc.addPage();
+        yPos = MARGIN + 10;
+        doc.setFontSize(11); // Restore font size
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${item.name}`, MARGIN + 5, yPos);
       yPos += 5;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+
+      if (item.classifications && item.classifications.length > 0) {
+        item.classifications.forEach(cls => {
+          if (yPos > PAGE_HEIGHT - MARGIN - 10) {
+            doc.addPage();
+            yPos = MARGIN + 10;
+            doc.setFontSize(10);
+          }
+          doc.text(`• ${cls}`, MARGIN + 10, yPos);
+          yPos += 5;
+        });
+      } else {
+        doc.text(`• Sem classificação específica`, MARGIN + 10, yPos);
+        yPos += 5;
+      }
+      yPos += 2; // Extra space between students
+      doc.setFontSize(11); // Restore for next student name
     });
   }
 
   // Signature spaces (compact)
-  yPos = PAGE_HEIGHT - MARGIN - 30;
+  yPos = Math.max(yPos, PAGE_HEIGHT - MARGIN - 30);
+  if (yPos > PAGE_HEIGHT - MARGIN - 30) {
+    doc.addPage();
+    yPos = PAGE_HEIGHT - MARGIN - 30;
+  }
 
   const signatureWidth = 60;
   doc.line(MARGIN, yPos, MARGIN + signatureWidth, yPos);
@@ -468,7 +518,7 @@ export const generateCouncilMinutes = (
   // Footer
   doc.setFontSize(7);
   doc.text(`Documento gerado em ${today}`, MARGIN, PAGE_HEIGHT - 8);
-  doc.text('Bom Conselho', PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
+  doc.text(schoolName, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 8, { align: 'right' });
 
   return doc;
 };

@@ -51,7 +51,8 @@ const ReportsPage = () => {
     // build map of code -> description for PDF rendering
     const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
-    const doc = generateStudentReport(student, classData, codeMap);
+    const doc = generateStudentReport(student, classData, codeMap, schoolInfo);
+    doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
 
     toast({
       title: "Relatório gerado com sucesso!",
@@ -75,7 +76,7 @@ const ReportsPage = () => {
       const s = students.find(st => st.name === name);
       return `${name}${s && s.paee ? ' (PAEE)' : ''}`;
     });
-    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents());
+    const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents(), schoolInfo);
     doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
 
     toast({
@@ -92,7 +93,11 @@ const ReportsPage = () => {
     }
 
     try {
-      const blob = await generateMinutesDocx(classData, minutesNotes, improvementPoints, selectedBest, getAttentionStudents());
+      const bestWithPaee = selectedBest.map(name => {
+        const s = students.find(st => st.name === name);
+        return `${name}${s && s.paee ? ' (PAEE)' : ''}`;
+      });
+      const blob = await generateMinutesDocx(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents(), schoolInfo);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -115,7 +120,7 @@ const ReportsPage = () => {
     if (!student) return;
     const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
-    const doc = generateStudentReport(student, classData, codeMap);
+    const doc = generateStudentReport(student, classData, codeMap, schoolInfo);
     doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
 
     toast({
@@ -129,7 +134,7 @@ const ReportsPage = () => {
     const student = students.find(s => s.id === selectedStudentId);
     if (!student) return;
     try {
-      const blob = await generateStudentDocx(student, classData as any, behavioralCodes.reduce((m: any, c: any) => { m[c.code] = c.description; return m }, {}));
+      const blob = await generateStudentDocx(student, classData as any, behavioralCodes.reduce((m: any, c: any) => { m[c.code] = c.description; return m }, {}), schoolInfo);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -153,7 +158,7 @@ const ReportsPage = () => {
     const codeMap: Record<string, string> = {};
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     try {
-      const blob = await generateStudentDocx(student, classData, codeMap);
+      const blob = await generateStudentDocx(student, classData, codeMap, schoolInfo);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -175,7 +180,7 @@ const ReportsPage = () => {
     try {
       const codeMap: Record<string, string> = {};
       behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
-      const blob = await generateStudentDocx(student, classData as any, codeMap);
+      const blob = await generateStudentDocx(student, classData as any, codeMap, schoolInfo);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -202,7 +207,7 @@ const ReportsPage = () => {
       behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
 
       for (const student of students) {
-        const doc = generateStudentReport(student, classData, codeMap);
+        const doc = generateStudentReport(student, classData, codeMap, schoolInfo);
         const blob: Blob = doc.output('blob');
         const filename = `relatorio_${student.name.replace(/\s+/g, '_')}.pdf`;
         zip.file(filename, blob);
@@ -258,28 +263,80 @@ const ReportsPage = () => {
     return map;
   };
 
+  // Initialize school info from local storage (read-only here)
+  const [schoolInfo] = useState(() => {
+    const saved = localStorage.getItem('schoolInfo');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: 'Escola Técnica Estadual',
+      director: '',
+      coordinator: '',
+      address: '',
+      phone: '',
+      email: '',
+    };
+  });
+
   const getAttentionStudents = () => {
-    // Return list of strings: "Name — Classification Description".
-    const list: string[] = [];
+    // Return list of objects: { name, classifications, paee }
+    const list: { name: string, classifications: string[], paee: boolean }[] = [];
+
     students.forEach(s => {
       const belowAvg = Object.values(s.subjects).some((sub: any) => sub.grade < 5);
-      // prefer detractor behavioral codes (filter out descriptions mentioning 'POSITIV')
-      const detractorCodes = (s.behavioralCodes || []).filter((code: string) => {
+
+      const reasons: string[] = [];
+
+      // Add behavioral descriptions (ALL of them, not just detractors)
+      if (s.behavioralCodes && s.behavioralCodes.length > 0) {
+        s.behavioralCodes.forEach((code: string) => {
+          const codeObj = behavioralCodes.find(c => c.code === code);
+          if (codeObj) {
+            reasons.push(`${code} – ${codeObj.description}`);
+          } else {
+            reasons.push(`${code}`);
+          }
+        });
+      }
+
+      // Add other flags if no behavioral codes present (or in addition? User requirement: "Display ALL classifications assigned... Preserve...")
+      // If student has NO behavioral codes, but has low frequency or low grades, we should list them?
+      // User requirements say: "For EACH student listed in the Ata... Display ALL classifications". 
+      // It implies listing students who are ON the attention list. Who is on the list?
+      // Usually students with behavioral codes, low frequency, or low grades.
+
+      const extraReasons: string[] = [];
+      if (s.lowFrequency) extraReasons.push('Baixa Frequência');
+      if (belowAvg) extraReasons.push('Disciplinas abaixo da média');
+
+      // If existing behavioral codes are all "Positive", should they be on "Attention" list?
+      // User requirement 7 says "Do NOT auto-generate interpretations... The Ata must reflect decisions".
+      // Usually "Attention" list implies negative things. 
+      // Logic in previous version: filtered out 'POSITIV'.
+      // New requirement: "Show ALL classifications... preserve code and description".
+
+      // I will include student if they have ANY detractor code OR low freq OR low grades.
+      // And I will list ALL codes they have.
+
+      const hasDetractor = (s.behavioralCodes || []).some((code: string) => {
         const desc = behavioralCodes.find(c => c.code === code)?.description || '';
-        return !/POSITIV/i.test(desc);
+        return !/POSITIV/i.test(desc) && !/BOM/i.test(desc) && !/EXCELENTE/i.test(desc);
       });
-      if (detractorCodes.length > 0) {
-        const code = detractorCodes[0];
-        const desc = behavioralCodes.find(c => c.code === code)?.description || '';
-        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — ${desc}`);
-      } else if (s.lowFrequency) {
-        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — Baixa frequência`);
-      } else if (belowAvg) {
-        list.push(`${s.name}${s.paee ? ' (PAEE)' : ''} — Disciplinas abaixo da média`);
+
+      if (hasDetractor || s.lowFrequency || belowAvg) {
+        // combine explicit codes with system flags if needed, or just codes?
+        // User example shows: "2 - Precisa de Atenção", "3 - Dificuldade...".
+        // It doesn't show "Baixa Frequência" as a bullet point in the example, but the previous code added it.
+        // I will keep system flags as additional bullet points to ensure "Completeness".
+
+        list.push({
+          name: `${s.name}${s.paee ? ' (PAEE)' : ''}`,
+          classifications: [...reasons, ...extraReasons],
+          paee: !!s.paee
+        });
       }
     });
-    // remove duplicates
-    return Array.from(new Set(list));
+
+    return list;
   };
 
   // initialize suggested best when students load
@@ -664,8 +721,15 @@ const ReportsPage = () => {
                           {getAttentionStudents().length === 0 ? (
                             <li className="text-sm text-gray-500">Nenhum aluno explicitamente indicado.</li>
                           ) : (
-                            getAttentionStudents().map(name => (
-                              <li key={name}>{name}</li>
+                            getAttentionStudents().map((item, idx) => (
+                              <li key={idx} className="flex flex-col">
+                                <span className="font-medium">{item.name}</span>
+                                {item.classifications && item.classifications.length > 0 && (
+                                  <span className="text-xs text-gray-500 pl-2">
+                                    {item.classifications.join(', ')}
+                                  </span>
+                                )}
+                              </li>
                             ))
                           )}
                         </ul>
