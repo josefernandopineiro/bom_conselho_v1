@@ -10,6 +10,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { processMapaoFile } from '@/utils/fileProcessor';
 import { useStudents } from '@/context/StudentsContext';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { createUsageEvent, usageTracker } from '@/services/usageTracker';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -58,10 +59,24 @@ const Index = () => {
         duration: 5000,
       });
 
+      usageTracker.track(
+        createUsageEvent('upload_success', {
+          className: classData.name,
+          studentsCount: students.length,
+          extension: selectedFile.name.split('.').pop()?.toLowerCase() || 'unknown',
+        }),
+      );
+
       // Navega para a página de alunos
       navigate('/students');
     } catch (err) {
       console.error('Erro ao processar arquivo:', err);
+      usageTracker.track(
+        createUsageEvent('upload_failed', {
+          error: err instanceof Error ? err.message : 'unknown_error',
+          fileName: selectedFile.name,
+        }),
+      );
       setError((err as Error).message || 'Ocorreu um erro ao processar o arquivo.');
     } finally {
       setIsLoading(false);

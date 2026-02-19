@@ -9,6 +9,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { useStudents } from '@/context/StudentsContext';
 import { generateStudentReport, generateCouncilMinutes } from '@/utils/pdfGenerator';
 import { generateStudentDocx, generateMinutesDocx } from '@/utils/docxGenerator';
+import { createUsageEvent, usageTracker } from '@/services/usageTracker';
 
 const formatFrequency = (frequency: number | undefined) => {
   if (frequency === undefined || isNaN(frequency)) {
@@ -53,6 +54,7 @@ const ReportsPage = () => {
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     const doc = generateStudentReport(student, classData, codeMap, schoolInfo);
     doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
+    usageTracker.track(createUsageEvent('report_pdf_generated', { studentId, source: 'single_generate' }));
 
     toast({
       title: "Relatório gerado com sucesso!",
@@ -78,6 +80,7 @@ const ReportsPage = () => {
     });
     const doc = generateCouncilMinutes(classData, minutesNotes, improvementPoints, bestWithPaee, getAttentionStudents(), schoolInfo);
     doc.save(`ata_conselho_${classData.name}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
+    usageTracker.track(createUsageEvent('minutes_pdf_generated', { className: classData.name }));
 
     toast({
       title: "Ata gerada com sucesso!",
@@ -106,6 +109,7 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      usageTracker.track(createUsageEvent('minutes_docx_generated', { className: classData.name }));
 
       toast({ title: 'Download DOCX iniciado', description: 'A ata em formato .docx está sendo baixada.' });
     } catch (err) {
@@ -122,6 +126,7 @@ const ReportsPage = () => {
     behavioralCodes.forEach(c => { codeMap[c.code] = c.description; });
     const doc = generateStudentReport(student, classData, codeMap, schoolInfo);
     doc.save(`relatorio_${student.name.replace(/\s+/g, '_')}.pdf`);
+    usageTracker.track(createUsageEvent('report_pdf_generated', { studentId: student.id, source: 'download_selected' }));
 
     toast({
       title: "Download iniciado",
@@ -143,6 +148,7 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      usageTracker.track(createUsageEvent('report_docx_generated', { studentId: student.id, source: 'download_selected' }));
 
       toast({ title: 'Download iniciado', description: 'O documento editável está sendo baixado.' });
     } catch (err) {
@@ -167,6 +173,7 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      usageTracker.track(createUsageEvent('report_docx_generated', { studentId: student.id, source: 'download_selected_alt' }));
       toast({ title: 'Download DOCX iniciado', description: 'O arquivo .docx está sendo baixado.' });
     } catch (err) {
       console.error(err);
@@ -189,6 +196,7 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      usageTracker.track(createUsageEvent('report_docx_generated', { studentId: student.id, source: 'list_action' }));
       toast({ title: 'Download iniciado', description: 'O documento Word está sendo baixado.' });
     } catch (err) {
       console.error(err);
@@ -222,6 +230,7 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      usageTracker.track(createUsageEvent('reports_zip_generated', { studentsCount: students.length }));
 
       toast({ title: 'Lote de relatórios gerado', description: 'O arquivo compactado foi gerado e o download deve começar.', duration: 4000 });
     } catch (err) {
