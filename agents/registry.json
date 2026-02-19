@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "product": "Bom Conselho",
+  "agents": [
+    {
+      "id": "agente-ingestao-qualidade-dados",
+      "file": "agents/especializados/agente-ingestao-qualidade-dados.md",
+      "focus": "Importação robusta e normalização de mapões",
+      "kpis": [
+        "taxa_importacao_sucesso",
+        "tempo_correcao_inconsistencias",
+        "taxa_reprocessamento"
+      ]
+    },
+    {
+      "id": "agente-diagnostico-pedagogico",
+      "file": "agents/especializados/agente-diagnostico-pedagogico.md",
+      "focus": "Priorização de risco acadêmico e recomendações",
+      "kpis": [
+        "alunos_com_plano_acao",
+        "variacao_media_desempenho",
+        "reducao_reprovacao"
+      ]
+    },
+    {
+      "id": "agente-copiloto-documentos",
+      "file": "agents/especializados/agente-copiloto-documentos.md",
+      "focus": "Padronização e fechamento rápido de atas/relatórios",
+      "kpis": [
+        "tempo_fechamento_conselho",
+        "taxa_revisao_manual",
+        "consistencia_documental"
+      ]
+    },
+    {
+      "id": "agente-governanca-lgpd",
+      "file": "agents/especializados/agente-governanca-lgpd.md",
+      "focus": "Conformidade, trilha de auditoria e retenção",
+      "kpis": [
+        "incidentes_acesso",
+        "aderencia_retencao",
+        "tempo_resposta_solicitacao_dados"
+      ]
+    },
+    {
+      "id": "agente-monetizacao-cs",
+      "file": "agents/especializados/agente-monetizacao-cs.md",
+      "focus": "Receita recorrente, adoção e expansão",
+      "kpis": [
+        "mrr",
+        "churn",
+        "expansao_contas"
+      ]
+    }
+  ]
+}
